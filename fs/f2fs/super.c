@@ -3675,6 +3675,7 @@ static int __init init_f2fs_fs(void)
 			printk("%s error: register notifier failed!\n", __func__);
 		}
 #endif
+	f2fs_init_rapid_gc();
 
 	return 0;
 
@@ -3704,7 +3705,7 @@ static void __exit exit_f2fs_fs(void)
 #ifdef VENDOR_EDIT
 	power_supply_unreg_notifier(&f2fs_battery_notify_block);
 #endif
-
+	f2fs_destroy_rapid_gc();
 	f2fs_destroy_post_read_processing();
 	f2fs_destroy_root_stats();
 	unregister_filesystem(&f2fs_fs_type);
