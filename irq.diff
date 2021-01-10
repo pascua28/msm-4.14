@@ -1,0 +1,124 @@
+diff --git a/include/linux/interrupt.h b/include/linux/interrupt.h
+index b98602ce3cf9..a2e537d1bde5 100644
+--- a/include/linux/interrupt.h
++++ b/include/linux/interrupt.h
+@@ -65,8 +65,6 @@
+  *                their interrupt handlers.
+  * IRQF_PERF_AFFINE - Interrupt is critical to the overall performance of the
+  *		      system and should be processed on a big CPU.
+- * IRQF_PRIME_AFFINE - Interrupt is critical to the overall performance of the
+- *		       system and should be processed on a prime CPU.
+  */
+ #define IRQF_SHARED		0x00000080
+ #define IRQF_PROBE_SHARED	0x00000100
+@@ -81,7 +79,6 @@
+ #define IRQF_EARLY_RESUME	0x00020000
+ #define IRQF_COND_SUSPEND	0x00040000
+ #define IRQF_PERF_AFFINE	0x00080000
+-#define IRQF_PRIME_AFFINE	0x00100000
+ 
+ #define IRQF_TIMER		(__IRQF_TIMER | IRQF_NO_SUSPEND | IRQF_NO_THREAD)
+ 
+diff --git a/include/linux/kthread.h b/include/linux/kthread.h
+index eba91e98c8c3..f45aa41e2c0c 100644
+--- a/include/linux/kthread.h
++++ b/include/linux/kthread.h
+@@ -60,8 +60,6 @@ struct task_struct *kthread_create_on_cpu(int (*threadfn)(void *data),
+ 		= kthread_create(threadfn, data, namefmt, ## __VA_ARGS__); \
+ 	if (!IS_ERR(__k)) {						   \
+ 		__k->flags |= PF_PERF_CRITICAL;				   \
+-		BUILD_BUG_ON(perfmask != cpu_perf_mask &&		   \
+-			     perfmask != cpu_prime_mask);		   \
+ 		kthread_bind_mask(__k, perfmask);			   \
+ 		wake_up_process(__k);					   \
+ 	}								   \
+diff --git a/kernel/cpu.c b/kernel/cpu.c
+index f9f1edac6257..2347e443a169 100644
+--- a/kernel/cpu.c
++++ b/kernel/cpu.c
+@@ -1038,10 +1038,9 @@ static int do_cpu_down(unsigned int cpu, enum cpuhp_state target)
+ 	cpumask_andnot(&newmask, cpu_online_mask, cpumask_of(cpu));
+ 	preempt_enable();
+ 
+-	/* One big, LITTLE, and prime CPU must remain online */
++	/* One big and LITTLE CPU must remain online */
+ 	if (!cpumask_intersects(&newmask, cpu_lp_mask) ||
+-	    !cpumask_intersects(&newmask, cpu_perf_mask) ||
+-	    !cpumask_intersects(&newmask, cpu_prime_mask))
++	    !cpumask_intersects(&newmask, cpu_perf_mask))
+ 		return -EINVAL;
+ 
+ 	/*
+diff --git a/kernel/irq/manage.c b/kernel/irq/manage.c
+index 9beee28e9070..e33fa70c36af 100644
+--- a/kernel/irq/manage.c
++++ b/kernel/irq/manage.c
+@@ -33,7 +33,6 @@ struct irq_desc_list {
+ static LIST_HEAD(perf_crit_irqs);
+ static DEFINE_RAW_SPINLOCK(perf_irqs_lock);
+ static int perf_cpu_index = -1;
+-static int prime_cpu_index = -1;
+ static bool perf_crit_suspended;
+ 
+ #ifdef CONFIG_IRQ_FORCED_THREADING
+@@ -1160,18 +1159,11 @@ static void add_desc_to_perf_list(struct irq_desc *desc, unsigned int perf_flag)
+ 
+ static void affine_one_perf_thread(struct irqaction *action)
+ {
+-	const struct cpumask *mask;
+-
+ 	if (!action->thread)
+ 		return;
+ 
+-	if (action->flags & IRQF_PERF_AFFINE)
+-		mask = cpu_perf_mask;
+-	else
+-		mask = cpu_prime_mask;
+-
+ 	action->thread->flags |= PF_PERF_CRITICAL;
+-	set_cpus_allowed_ptr(action->thread, mask);
++	set_cpus_allowed_ptr(action->thread, cpu_perf_mask);
+ }
+ 
+ static void unaffine_one_perf_thread(struct irqaction *action)
+@@ -1192,9 +1184,6 @@ static void affine_one_perf_irq(struct irq_desc *desc, unsigned int perf_flag)
+ 	if (perf_flag & IRQF_PERF_AFFINE) {
+ 		mask = cpu_perf_mask;
+ 		mask_index = &perf_cpu_index;
+-	} else {
+-		mask = cpu_prime_mask;
+-		mask_index = &prime_cpu_index;
+ 	}
+ 
+ 	if (!cpumask_intersects(mask, cpu_online_mask)) {
+@@ -1270,7 +1259,6 @@ void reaffine_perf_irqs(bool from_hotplug)
+ 	if (!from_hotplug || !perf_crit_suspended) {
+ 		perf_crit_suspended = false;
+ 		perf_cpu_index = -1;
+-		prime_cpu_index = -1;
+ 		list_for_each_entry(data, &perf_crit_irqs, list) {
+ 			struct irq_desc *desc = data->desc;
+ 
+@@ -1540,7 +1528,7 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
+ 			irqd_set(&desc->irq_data, IRQD_NO_BALANCING);
+ 		}
+ 
+-		if (new->flags & (IRQF_PERF_AFFINE | IRQF_PRIME_AFFINE)) {
++		if (new->flags & (IRQF_PERF_AFFINE)) {
+ 			affine_one_perf_thread(new);
+ 			irqd_set(&desc->irq_data, IRQD_PERF_CRITICAL);
+ 			*old_ptr = new;
+diff --git a/kernel/sched/core.c b/kernel/sched/core.c
+index 72e9176cc8eb..434cfe7c65af 100755
+--- a/kernel/sched/core.c
++++ b/kernel/sched/core.c
+@@ -1118,8 +1118,7 @@ static int __set_cpus_allowed_ptr(struct task_struct *p,
+ 	cpumask_t allowed_mask;
+ 
+ 	/* Don't allow perf-critical threads to have non-perf affinities */
+-	if ((p->flags & PF_PERF_CRITICAL) && new_mask != cpu_perf_mask &&
+-	    new_mask != cpu_prime_mask)
++	if ((p->flags & PF_PERF_CRITICAL) && new_mask != cpu_perf_mask)
+ 		return -EINVAL;
+ 
+ 	rq = task_rq_lock(p, &rf);
