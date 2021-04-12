@@ -17,6 +17,12 @@
 #include "dsi-panel-sim-dsc375-cmd.dtsi"
 #include "dsi-panel-nt36672c-fhd-plus-video.dtsi"
 #include <dt-bindings/clock/mdss-10nm-pll-clk.h>
+/*#ifdef ODM_LQ_EDIT*/
+/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/03,modified for bring up LCD*/
+#include "dsi-panel-hx83112a-dsbj-fhd-plus-video.dtsi"
+/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/25,add for bringup C-PHY LCD*/
+#include "dsi-panel-nt36672c-boe-fhd-plus-video.dtsi"
+/*endif ODM_LQ_EDIT*/
 
 &soc {
 	dsi_panel_pwr_supply: dsi_panel_pwr_supply {
@@ -144,6 +150,35 @@
 		qcom,dsi-panel = <&dsi_sim_dsc_375_cmd>;
 	};
 
+	/*#ifdef ODM_LQ_EDIT*/
+	/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/03,modified for bring up LCD*/
+	dsi_hx83112a_dsbj_vid_display: qcom,dsi-display@5 {
+		label = "dsi_hx83112a_dsbj_vid_display";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
+			"src_byte_clk0", "src_pixel_clk0",
+			"shadow_byte_clk0", "shadow_pixel_clk0";
+
+		qcom,dsi-panel = <&dsi_hx83112a_dsbj_video>;
+	};
+
+	/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/25,add for bringup C-PHY LCD*/
+	dsi_nt36672c_boe_video_display: qcom,dsi-display@6 {
+		label = "dsi_nt36672c_boe_video_display";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+
+		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
+					"cphy_byte_clk0", "cphy_pixel_clk0";
+		qcom,dsi-panel = <&dsi_nt36672c_boe_video>;
+	};
+	/*#endif ODM_LQ_EDIT*/
+
 	dsi_nt36672c_video_display: qcom,dsi-display@5 {
 		label = "dsi_nt36672c_video_display";
 		qcom,display-type = "primary";
@@ -199,6 +234,12 @@
 			&dsi_sim_vid_display
 			&dsi_sim_cmd_display
 			&dsi_sim_dsc_375_cmd_display
+			/*#ifdef ODM_LQ_EDIT*/
+			/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/03,modified for bring up LCD*/
+			&dsi_hx83112a_dsbj_vid_display
+			/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/25,add for bringup C-PHY LCD*/
+			&dsi_nt36672c_boe_video_display>;
+			/*endif ODM_LQ_EDIT*/
 			&dsi_nt36672c_video_display>;
 	};
 
@@ -355,6 +396,37 @@
 	};
 };
 
+/*#ifdef ODM_LQ_EDIT*/
+/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/03,modified for bring up LCD*/
+&dsi_hx83112a_dsbj_video {
+        qcom,mdss-dsi-t-clk-post = <0x0f>;
+	qcom,mdss-dsi-t-clk-pre = <0x37>;
+	qcom,mdss-dsi-display-timings {
+		timing@0{
+			qcom,mdss-dsi-panel-phy-timings =[00 24 0a 0a 26 24 0a 0a
+					06 02 04 00];
+
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/25,add for bringup C-PHY LCD*/
+&dsi_nt36672c_boe_video {
+	qcom,mdss-dsi-t-clk-post = <0x00>;
+	qcom,mdss-dsi-t-clk-pre = <0x00>;
+	qcom,mdss-dsi-display-timings {
+		timing@0{
+				 qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 24 23 08 08
+					08 05 02 04];
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+/*#endif ODM_LQ_EDIT*/
+
 &dsi_nt36672c_video {
 	qcom,mdss-dsi-t-clk-post = <0x00>;
 	qcom,mdss-dsi-t-clk-pre = <0x00>;
@@ -372,6 +444,7 @@
 	qcom,dsi-dyn-clk-skip-timing-update;
 	qcom,dsi-dyn-clk-list =
 		<1052068500 1047684883 1043301259 1038917642 1034534025>;
+	qcom,dsi-dyn-clk-type = "constant-fps-adjust-hfp";
 	qcom,mdss-dsi-display-timings {
 		timing@0{
 			qcom,mdss-dsi-panel-phy-timings = [00 23 09 09 26 24 09

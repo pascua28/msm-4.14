@@ -183,7 +183,7 @@ static int32_t cam_cci_lock_queue(struct cci_device *cci_dev,
 	return cam_cci_write_i2c_queue(cci_dev, val, master, queue);
 }
 
-#ifdef DUMP_CCI_REGISTERS
+//#ifdef DUMP_CCI_REGISTERS
 static void cam_cci_dump_registers(struct cci_device *cci_dev,
 	enum cci_i2c_master_t master, enum cci_i2c_queue_t queue)
 {
@@ -231,7 +231,7 @@ static void cam_cci_dump_registers(struct cci_device *cci_dev,
 			reg_offset, read_val);
 	}
 }
-#endif
+//#endif
 
 static uint32_t cam_cci_wait(struct cci_device *cci_dev,
 	enum cci_i2c_master_t master,
@@ -249,9 +249,9 @@ static uint32_t cam_cci_wait(struct cci_device *cci_dev,
 	CAM_DBG(CAM_CCI, "wait DONE_for_completion_timeout");
 
 	if (rc <= 0) {
-#ifdef DUMP_CCI_REGISTERS
+//#ifdef DUMP_CCI_REGISTERS
 		cam_cci_dump_registers(cci_dev, master, queue);
-#endif
+//#endif
 		CAM_ERR(CAM_CCI, "wait for queue: %d", queue);
 		if (rc == 0)
 			rc = -ETIMEDOUT;

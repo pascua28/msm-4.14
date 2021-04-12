@@ -40,7 +40,10 @@
 #include <linux/msm-bus.h>
 #include <linux/pm_runtime.h>
 #include <trace/events/mmc.h>
-
+#ifdef ODM_LQ_EDIT
+/*Hongbin.Chen@ODM_LQ.BSP.Storage.Tcard,  2020/07/30 ,add sdcard tray detect*/
+#include <linux/proc_fs.h>
+#endif
 #include "sdhci-msm.h"
 #include "sdhci-msm-ice.h"
 #include "cmdq_hci.h"
@@ -445,7 +448,47 @@ err:
 out:
 	return rc;
 }
+#ifdef ODM_LQ_EDIT
+/*Hongbin.Chen@ODM_LQ.BSP.Storage.Tcard,  2020/07/30 ,add sdcard tray detect*/
+static int sdhci_irq_gpio = 0;
+static int sim_detect_show(struct seq_file *m, void *v)
+{
+	int gpio_value = 0;
+	gpio_value = gpio_get_value_cansleep(sdhci_irq_gpio);
+	pr_debug("%s: get gpio %d value is %d\n",
+		__func__, sdhci_irq_gpio, gpio_value);
+	seq_printf(m, "%d\n", gpio_value);
+	return 0;
+}
 
+static int sim_detect_entry_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, sim_detect_show, NULL);
+}
+
+static const struct file_operations sim_detect_fops = {
+	.open = sim_detect_entry_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static int sim_detect_create_proc(void)
+{
+	struct proc_dir_entry *trey_status_entry;
+	trey_status_entry = proc_create("sim_detect", 0444, NULL, &sim_detect_fops);
+	if (!trey_status_entry) {
+		return 1;
+	}
+	return 0;
+}
+
+static void sim_detect_remove_proc(void)
+{
+	remove_proc_entry("sim_detect", NULL);
+}
+#endif
+/*Hongbin.Chen@ODM_LQ.BSP.Storage.Tcard,  2020/07/30 ,add sdcard tray detect end*/
 static ssize_t store_auto_cmd21(struct device *dev, struct device_attribute
 				*attr, const char *buf, size_t count)
 {
@@ -2000,6 +2043,11 @@ struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
                                 &msm_host->mmc->ios.power_delay_ms);
 
 	pdata->status_gpio = of_get_named_gpio_flags(np, "cd-gpios", 0, &flags);
+#ifdef ODM_LQ_EDIT
+/*Hongbin.Chen@ODM_LQ.BSP.Storage.Tcard,  2020/07/30 ,add sdcard tray detect*/
+	sdhci_irq_gpio = pdata->status_gpio;
+#endif
+/*Hongbin.Chen@ODM_LQ.BSP.Storage.Tcard,  2020/07/30 ,add sdcard tray detect*/
 	if (gpio_is_valid(pdata->status_gpio) && !(flags & OF_GPIO_ACTIVE_LOW))
 		pdata->caps2 |= MMC_CAP2_CD_ACTIVE_HIGH;
 
@@ -4739,6 +4787,7 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	}
 	msm_host_offset = msm_host->offset;
 	msm_host->sdhci_msm_pdata.ops = &sdhci_msm_ops;
+
 	host = sdhci_pltfm_init(pdev, &msm_host->sdhci_msm_pdata, 0);
 	if (IS_ERR(host)) {
 		ret = PTR_ERR(host);
@@ -5241,7 +5290,17 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	}
 	if (sdhci_msm_is_bootdevice(&pdev->dev))
 		mmc_flush_detect_work(host->mmc);
-
+#ifdef ODM_LQ_EDIT
+/*Hongbin.Chen@ODM_LQ.BSP.Storage.Tcard,  2020/07/30 ,add sdcard tray detect*/
+	if (!strcmp(mmc_hostname(host->mmc), "mmc0")) {
+		ret = sim_detect_create_proc();
+		if (ret) {
+			pr_err("%s: %s: failed creating card tray detect attr: %d\n",
+				mmc_hostname(host->mmc), __func__, ret);
+		}
+	}
+/*Hongbin.Chen@ODM_LQ.BSP.Storage.Tcard,  2020/07/30 ,add sdcard tray detect*/
+#endif
 	/* Successful initialization */
 	goto out;
 
@@ -5346,7 +5405,13 @@ static int sdhci_msm_remove(struct platform_device *pdev)
 	}
 
 	sdhci_pltfm_free(pdev);
-
+#ifdef ODM_LQ_EDIT
+/*Hongbin.Chen@ODM_LQ.BSP.Storage.Tcard,  2020/07/30 ,add sdcard tray detect*/
+	if (!strcmp(mmc_hostname(host->mmc), "mmc0")) {
+		sim_detect_remove_proc();
+	}
+/*Hongbin.Chen@ODM_LQ.BSP.Storage.Tcard,  2020/07/30 ,add sdcard tray detect end*/
+#endif
 	return 0;
 }
 

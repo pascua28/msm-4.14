@@ -22,6 +22,7 @@
 #include <linux/sched.h>
 #include <linux/ratelimit.h>
 #include <linux/timer.h>
+#include <linux/jiffies.h>
 #include <linux/sched/task.h>
 #ifdef CONFIG_DIAG_OVER_USB
 #include <linux/usb/usbdiag.h>
@@ -2762,7 +2763,13 @@ long diagchar_compat_ioctl(struct file *filp,
 	struct diag_logging_mode_param_t mode_param;
 	struct diag_con_all_param_t con_param;
 	struct diag_query_pid_t pid_query;
-
+//#ifdef VENDOR_EDIT
+//Zhengpeng.Tan@NW.AP.Comm.923996, 2017/01/09
+//add for modem log postback
+//#ifdef FEATURE_MODEMLOG_POSTBACK
+	int clear_mask_param = diag_mask_clear_param;
+//#endif/*FEATURE_MODEMLOG_POSTBACK*/
+//#endif/*VENDOR_EDIT*/
 	switch (iocmd) {
 	case DIAG_IOCTL_COMMAND_REG:
 		result = diag_ioctl_cmd_reg_compat(ioarg);
@@ -2906,6 +2913,22 @@ long diagchar_compat_ioctl(struct file *filp,
 		else
 			result = 0;
 		break;
+//#ifdef VENDOR_EDIT
+//Zhengpeng.Tan@NW.AP.Comm.923996, 2017/01/09
+//add for modem log postback
+//#ifdef FEATURE_MODEMLOG_POSTBACK
+	case DIAG_IOCTL_SET_CLEARMASK:
+		if (copy_from_user(&clear_mask_param, (void __user *)ioarg,
+			sizeof(int))) {
+			return -EFAULT;
+		}
+		pr_err("diag: In %s, clear_mask_param1: %d\n",
+			__func__, clear_mask_param);
+		diag_mask_clear_param = clear_mask_param;
+		result = 0;
+		break;
+//#endif/*FEATURE_MODEMLOG_POSTBACK*/
+//#endif/*VENDOR_EDIT*/
 	}
 	return result;
 }
@@ -2922,7 +2945,13 @@ long diagchar_ioctl(struct file *filp,
 	struct diag_logging_mode_param_t mode_param;
 	struct diag_con_all_param_t con_param;
 	struct diag_query_pid_t pid_query;
-
+//#ifdef VENDOR_EDIT
+//Zhengpeng.Tan@NW.AP.Comm.923996, 2017/01/09
+//add for modem log postback
+//#ifdef FEATURE_MODEMLOG_POSTBACK
+	int clear_mask_param = diag_mask_clear_param;
+//#endif/*FEATURE_MODEMLOG_POSTBACK*/
+//#endif/*VENDOR_EDIT*/
 	switch (iocmd) {
 	case DIAG_IOCTL_COMMAND_REG:
 		result = diag_ioctl_cmd_reg(ioarg);
@@ -3067,6 +3096,22 @@ long diagchar_ioctl(struct file *filp,
 		else
 			result = 0;
 		break;
+//#ifdef VENDOR_EDIT
+//Zhengpeng.Tan@NW.AP.Comm.923996, 2017/01/09
+//add for modem log postback
+//#ifdef FEATURE_MODEMLOG_POSTBACK
+	case DIAG_IOCTL_SET_CLEARMASK:
+		if (copy_from_user(&clear_mask_param, (void __user *)ioarg,
+			sizeof(int))) {
+			return -EFAULT;
+		}
+		pr_err("diag: In %s, clear_mask_param2: %d\n",
+			__func__, clear_mask_param);
+		diag_mask_clear_param = clear_mask_param;
+		result = 0;
+		break;
+//#endif/*FEATURE_MODEMLOG_POSTBACK*/
+//#endif/*VENDOR_EDIT*/
 	}
 	return result;
 }
@@ -3074,7 +3119,7 @@ long diagchar_ioctl(struct file *filp,
 static int diag_process_apps_data_hdlc(unsigned char *buf, int len,
 				       int pkt_type)
 {
-	int err = 0;
+	int err = 0, wait_err = 0;
 	int ret = PKT_DROP;
 	struct diag_apps_data_t *data = &hdlc_data;
 	struct diag_send_desc_type send = { NULL, NULL, DIAG_STATE_START, 0 };
@@ -3105,8 +3150,15 @@ static int diag_process_apps_data_hdlc(unsigned char *buf, int len,
 	send.terminate = 1;
 
 wait_for_buffer:
-	wait_event_interruptible(driver->hdlc_wait_q,
-			(data->flushed == 0));
+	wait_err = wait_event_interruptible_timeout(driver->hdlc_wait_q,
+			(data->flushed == 0),
+			msecs_to_jiffies(PKT_PROCESS_TIMEOUT));
+	if (wait_err <= 0) {
+		DIAG_LOG(DIAG_DEBUG_USERSPACE,
+		"diag: Timeout while waiting for hdlc buffer to be flushed, err: %d\n",
+		wait_err);
+		return PKT_DROP;
+	}
 	spin_lock_irqsave(&driver->diagmem_lock, flags);
 	if (data->flushed) {
 		spin_unlock_irqrestore(&driver->diagmem_lock, flags);
@@ -3157,8 +3209,16 @@ wait_for_buffer:
 			goto fail_free_buf;
 		}
 wait_for_agg_buff:
-		wait_event_interruptible(driver->hdlc_wait_q,
-			(data->flushed == 0));
+		wait_err = wait_event_interruptible_timeout(driver->hdlc_wait_q,
+				(data->flushed == 0),
+				msecs_to_jiffies(PKT_PROCESS_TIMEOUT));
+		if (wait_err <= 0) {
+			DIAG_LOG(DIAG_DEBUG_USERSPACE,
+			"diag: Timeout while waiting for hdlc aggregation buffer to be flushed, err: %d\n",
+			wait_err);
+			return PKT_DROP;
+		}
+
 		spin_lock_irqsave(&driver->diagmem_lock, flags);
 		if (data->flushed) {
 			spin_unlock_irqrestore(&driver->diagmem_lock, flags);
@@ -3216,7 +3276,7 @@ fail_ret:
 static int diag_process_apps_data_non_hdlc(unsigned char *buf, int len,
 					   int pkt_type)
 {
-	int err = 0;
+	int err = 0, wait_err = 0;
 	int ret = PKT_DROP;
 	struct diag_pkt_frame_t header;
 	struct diag_apps_data_t *data = &non_hdlc_data;
@@ -3234,8 +3294,16 @@ static int diag_process_apps_data_non_hdlc(unsigned char *buf, int len,
 		return -EIO;
 	}
 wait_for_buffer:
-	wait_event_interruptible(driver->hdlc_wait_q,
-			(data->flushed == 0));
+	wait_err = wait_event_interruptible_timeout(driver->hdlc_wait_q,
+					(data->flushed == 0),
+					msecs_to_jiffies(PKT_PROCESS_TIMEOUT));
+	if (wait_err <= 0) {
+		DIAG_LOG(DIAG_DEBUG_USERSPACE,
+		"diag: Timeout while waiting for non-hdlc buffer to be flushed, err: %d\n",
+		wait_err);
+		return PKT_DROP;
+	}
+
 	spin_lock_irqsave(&driver->diagmem_lock, flags);
 	if (data->flushed) {
 		spin_unlock_irqrestore(&driver->diagmem_lock, flags);

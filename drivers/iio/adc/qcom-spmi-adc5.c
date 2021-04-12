@@ -771,6 +771,17 @@ static const struct adc_channels adc_chans_pmic5[ADC_MAX_CHANNEL] = {
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
 	[ADC_GPIO4_PU2]	= ADC_CHAN_TEMP("gpio4_pu2", 1,
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
+#ifdef VENDOR_EDIT
+#ifdef CONFIG_OPPO_SM6250_CHARGER
+#ifndef ODM_TARGET_DEVICE_206B1
+/* Yichun.Chen	PSW.BSP.CHG  2019-04-13  for read chargerid */
+/* Yichun.Chen	PSW.BSP.CHG  2019-05-16  for usb temp */
+	[ADC_GPIO2] = ADC_CHAN_VOLT("chgid_voltage", 1, SCALE_HW_CALIB_DEFAULT)
+#endif
+	[ADC_AMUX_THM3] = ADC_CHAN_VOLT("usb_temp1", 1, SCALE_HW_CALIB_DEFAULT)
+	[ADC_AMUX_THM2] = ADC_CHAN_VOLT("usb_temp2", 1, SCALE_HW_CALIB_DEFAULT)
+#endif
+#endif
 };
 
 static const struct adc_channels adc_chans_rev2[ADC_MAX_CHANNEL] = {

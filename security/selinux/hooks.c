@@ -1764,7 +1764,6 @@ static int cred_has_capability(const struct cred *cred,
 		BUG();
 		return -EINVAL;
 	}
-
 	rc = avc_has_perm_noaudit(sid, sid, sclass, av, 0, &avd);
 	if (audit == SECURITY_CAP_AUDIT) {
 		int rc2 = avc_audit(sid, sid, sclass, av, &avd, rc, &ad, 0);
@@ -3119,7 +3118,6 @@ static int selinux_inode_permission(struct inode *inode, int mask)
 	isec = inode_security_rcu(inode, flags & MAY_NOT_BLOCK);
 	if (IS_ERR(isec))
 		return PTR_ERR(isec);
-
 	rc = avc_has_perm_noaudit(sid, isec->sid, isec->sclass, perms, 0, &avd);
 	audited = avc_audit_required(perms, &avd, rc,
 				     from_access ? FILE__AUDIT_ACCESS : 0,
@@ -5158,7 +5156,15 @@ static int selinux_nlmsg_perm(struct sock *sk, struct sk_buff *skb)
 			       sk->sk_protocol, nlh->nlmsg_type,
 			       secclass_map[sksec->sclass - 1].name,
 			       task_pid_nr(current), current->comm);
+#ifdef VENDOR_EDIT
+/* Xianlin.Wu@ROM.Security, 2019/07/27, add for disallow toggling the kernel
+ * between enforcing mode and permissive mode via /selinux/enforce or
+ * selinux_enforcing symbol in normal/silence mode of release build.
+ */
+            if (!is_selinux_enforcing() || security_get_allow_unknown())
+#else
 			if (!selinux_enforcing || security_get_allow_unknown())
+#endif /* VENDOR_EDIT */
 				err = 0;
 		}
 

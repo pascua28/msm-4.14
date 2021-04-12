@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -3581,6 +3581,13 @@ static int dwc_dpdm_cb(struct notifier_block *nb, unsigned long evt, void *p)
 				dwc3_drd_state_string(mdwc->drd_state));
 		if (mdwc->drd_state == DRD_STATE_UNDEFINED)
 			queue_delayed_work(mdwc->sm_usb_wq, &mdwc->sm_work, 0);
+
+#ifndef VENDOR_EDIT
+/*LiYue@BSP.CHG.Basic, 2019/08/19, modify for ssusb can not in low power mode*/
+			schedule_delayed_work(&mdwc->sm_work, 0);
+#else
+			queue_delayed_work(mdwc->sm_usb_wq, &mdwc->sm_work, 0);
+#endif
 		break;
 	default:
 		dev_dbg(mdwc->dev, "%s: unknown event state:%s\n", __func__,
@@ -3628,8 +3635,7 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	 * in avoiding race conditions between xhci_plat_resume and
 	 * xhci_runtime_resume and also between hcd disconnect and xhci_resume.
 	 */
-	mdwc->sm_usb_wq = alloc_ordered_workqueue("k_sm_usb",
-						WQ_FREEZABLE | WQ_MEM_RECLAIM);
+	mdwc->sm_usb_wq = alloc_ordered_workqueue("k_sm_usb", WQ_FREEZABLE);
 	if (!mdwc->sm_usb_wq) {
 		destroy_workqueue(mdwc->dwc3_wq);
 		return -ENOMEM;
@@ -4534,7 +4540,14 @@ static int dwc3_msm_gadget_vbus_draw(struct dwc3_msm *mdwc, unsigned int mA)
 	pval.intval = 1000 * mA;
 
 set_prop:
+#ifdef VENDOR_EDIT
+/* Yichun.Chen  PSW.BSP.CHG  2019-05-05  for charging */
+	dev_info(mdwc->dev, "[OPPO_CHG]Avail curr from USB = %u, pre max_power = %u\n", mA, mdwc->max_power);
+	if (mA == 0 || mA == 2)
+		return 0;
+#else
 	dev_info(mdwc->dev, "Avail curr from USB = %u\n", mA);
+#endif
 	ret = power_supply_set_property(mdwc->usb_psy,
 				POWER_SUPPLY_PROP_SDP_CURRENT_MAX, &pval);
 	if (ret) {
@@ -4546,6 +4559,11 @@ set_prop:
 	return 0;
 }
 
+#ifdef VENDOR_EDIT
+/* Yichun.Chen  PSW.BSP.CHG  2019-08-07  for detect CDP */
+#define DWC3_DCTL		0xc704 
+#define DWC3_DCTL_RUN_STOP	BIT(31) 
+#endif
 
 /**
  * dwc3_otg_sm_work - workqueue function.
@@ -4562,6 +4580,11 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 	int ret = 0;
 	unsigned long delay = 0;
 	const char *state;
+
+#ifdef VENDOR_EDIT
+/* Yichun.Chen  PSW.BSP.CHG  2019-08-07  for detect CDP */
+	u32 reg; 
+#endif
 
 	if (mdwc->dwc3)
 		dwc = platform_get_drvdata(mdwc->dwc3);
@@ -4631,6 +4654,18 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 				atomic_read(&mdwc->dev->power.usage_count));
 			dwc3_otg_start_peripheral(mdwc, 1);
 			mdwc->drd_state = DRD_STATE_PERIPHERAL;
+
+#ifdef VENDOR_EDIT
+/* Yichun.Chen  PSW.BSP.CHG  2019-08-07  for detect CDP */
+			if (!dwc->softconnect && get_psy_type(mdwc) == POWER_SUPPLY_TYPE_USB_CDP) { 
+				dbg_event(0xFF, "cdp pullup dp", 0); 
+				reg = dwc3_readl(dwc->regs, DWC3_DCTL); 
+				reg |= DWC3_DCTL_RUN_STOP; 
+				dwc3_writel(dwc->regs, DWC3_DCTL, reg); 
+				break; 
+			}
+#endif
+
 			work = 1;
 		} else {
 			dwc3_msm_gadget_vbus_draw(mdwc, 0);

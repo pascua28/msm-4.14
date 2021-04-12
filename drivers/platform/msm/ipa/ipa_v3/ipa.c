@@ -129,6 +129,10 @@ static void ipa_dec_clients_disable_clks_on_wq(struct work_struct *work);
 static DECLARE_WORK(ipa_dec_clients_disable_clks_on_wq_work,
 	ipa_dec_clients_disable_clks_on_wq);
 
+static void ipa_inc_clients_enable_clks_on_wq(struct work_struct *work);
+static DECLARE_WORK(ipa_inc_clients_enable_clks_on_wq_work,
+	ipa_inc_clients_enable_clks_on_wq);
+
 static struct ipa3_plat_drv_res ipa3_res = {0, };
 
 static struct clk *ipa3_clk;
@@ -542,6 +546,68 @@ static void ipa3_vlan_l2tp_msg_free_cb(void *buff, u32 len, u32 type)
 	kfree(buff);
 }
 
+static void ipa3_pdn_config_msg_free_cb(void *buff, u32 len, u32 type)
+{
+	if (!buff) {
+		IPAERR("Null buffer\n");
+		return;
+	}
+
+	kfree(buff);
+}
+
+static int ipa3_send_pdn_config_msg(unsigned long usr_param)
+{
+	int retval;
+	struct ipa_ioc_pdn_config *pdn_info;
+	struct ipa_msg_meta msg_meta;
+	void *buff;
+
+	memset(&msg_meta, 0, sizeof(msg_meta));
+
+	pdn_info = kzalloc(sizeof(struct ipa_ioc_pdn_config),
+		GFP_KERNEL);
+	if (!pdn_info)
+		return -ENOMEM;
+
+	if (copy_from_user((u8 *)pdn_info, (void __user *)usr_param,
+		sizeof(struct ipa_ioc_pdn_config))) {
+		kfree(pdn_info);
+		return -EFAULT;
+	}
+
+	msg_meta.msg_len = sizeof(struct ipa_ioc_pdn_config);
+	buff = pdn_info;
+
+	msg_meta.msg_type = pdn_info->pdn_cfg_type;
+
+	IPADBG("type %d, interface name: %s, enable:%d\n", msg_meta.msg_type,
+		pdn_info->dev_name, pdn_info->enable);
+
+	if (pdn_info->pdn_cfg_type == IPA_PDN_IP_PASSTHROUGH_MODE_CONFIG) {
+		IPADBG("Client MAC %02x:%02x:%02x:%02x:%02x:%02x\n",
+			pdn_info->u.passthrough_cfg.client_mac_addr[0],
+			pdn_info->u.passthrough_cfg.client_mac_addr[1],
+			pdn_info->u.passthrough_cfg.client_mac_addr[2],
+			pdn_info->u.passthrough_cfg.client_mac_addr[3],
+			pdn_info->u.passthrough_cfg.client_mac_addr[4],
+			pdn_info->u.passthrough_cfg.client_mac_addr[5]);
+	}
+
+	retval = ipa3_send_msg(&msg_meta, buff,
+		ipa3_pdn_config_msg_free_cb);
+	if (retval) {
+		IPAERR("ipa3_send_msg failed: %d, msg_type %d\n",
+			retval,
+			msg_meta.msg_type);
+		kfree(buff);
+		return retval;
+	}
+	IPADBG("exit\n");
+
+	return 0;
+}
+
 static int ipa3_send_vlan_l2tp_msg(unsigned long usr_param, uint8_t msg_type)
 {
 	int retval;
@@ -625,6 +691,7 @@ static int ipa3_send_vlan_l2tp_msg(unsigned long usr_param, uint8_t msg_type)
 
 	return 0;
 }
+
 
 static void ipa3_gsb_msg_free_cb(void *buff, u32 len, u32 type)
 {
@@ -2682,6 +2749,13 @@ static long ipa3_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			(enum ipa_app_clock_vote_type) arg);
 		break;
 
+	case IPA_IOC_PDN_CONFIG:
+		if (ipa3_send_pdn_config_msg(arg)) {
+			retval = -EFAULT;
+			break;
+		}
+		break;
+
 	default:
 		IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
 		return -ENOTTY;
@@ -4588,12 +4662,31 @@ void _ipa_disable_clks_v3_0(void)
  */
 void ipa3_disable_clks(void)
 {
+	int type;
+
 	if (ipa3_ctx->ipa3_hw_mode != IPA_HW_MODE_NORMAL) {
 		IPAERR("not supported in this mode\n");
 		return;
 	}
 
 	IPADBG("disabling IPA clocks and bus voting\n");
+
+	/*
+	 * We see a NoC error on GSI on this flag sequence.
+	 * Need to set this flag first before clock off.
+	 */
+	atomic_set(&ipa3_ctx->ipa_clk_vote, 0);
+
+	/*
+	 * If there is still pending gsi irq, this indicate
+	 * issue on GSI FW side. We need to capture before
+	 * turn off the ipa clock.
+	 */
+	type = gsi_pending_irq_type();
+	if (type) {
+		IPAERR("unexpected gsi irq type: %d\n", type);
+		ipa_assert();
+	}
 
 	ipa3_ctx->ctrl->ipa3_disable_clks();
 
@@ -4602,7 +4695,6 @@ void ipa3_disable_clks(void)
 
 	if (msm_bus_scale_client_update_request(ipa3_ctx->ipa_bus_hdl, 0))
 		WARN(1, "bus scaling failed");
-	atomic_set(&ipa3_ctx->ipa_clk_vote, 0);
 }
 
 /**
@@ -4784,6 +4876,12 @@ void ipa3_inc_client_enable_clks(struct ipa_active_client_logging_info *id)
 	mutex_unlock(&ipa3_ctx->ipa3_active_clients.mutex);
 }
 
+static void ipa3_handle_gsi_differ_irq(void)
+{
+	queue_work(ipa3_ctx->power_mgmt_wq,
+		&ipa_inc_clients_enable_clks_on_wq_work);
+}
+
 /**
  * ipa3_active_clks_status() - update the current msm bus clock vote
  * status
@@ -4878,6 +4976,13 @@ void ipa3_dec_client_disable_clks(struct ipa_active_client_logging_info *id)
 static void ipa_dec_clients_disable_clks_on_wq(struct work_struct *work)
 {
 	__ipa3_dec_client_disable_clks();
+}
+
+static void ipa_inc_clients_enable_clks_on_wq(struct work_struct *work)
+{
+	ipa3_enable_clks();
+	IPAERR("unexpected clk access, clock on IPA to save reg");
+	ipa_assert();
 }
 
 /**
@@ -5717,6 +5822,7 @@ static int ipa3_post_init(const struct ipa3_plat_drv_res *resource_p,
 	gsi_props.req_clk_cb = NULL;
 	gsi_props.rel_clk_cb = NULL;
 	gsi_props.clk_status_cb = ipa3_active_clks_status;
+	gsi_props.enable_clk_bug_on = ipa3_handle_gsi_differ_irq;
 
 	if (ipa3_ctx->ipa_config_is_mhi) {
 		gsi_props.mhi_er_id_limits_valid = true;

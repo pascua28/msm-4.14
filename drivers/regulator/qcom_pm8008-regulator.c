@@ -25,7 +25,8 @@
 #include <linux/regulator/machine.h>
 #include <linux/regulator/of_regulator.h>
 #include <linux/string.h>
-
+#include <soc/oppo/boot_mode.h>
+#include "../power/oppo/oppo_vooc.h"
 #define pm8008_err(reg, message, ...) \
 	pr_err("%s: " message, (reg)->rdesc.name, ##__VA_ARGS__)
 #define pm8008_debug(reg, message, ...) \
@@ -69,7 +70,6 @@
 
 #define MAX_REG_NAME			20
 #define PM8008_MAX_LDO			7
-
 struct pm8008_chip {
 	struct device		*dev;
 	struct regmap		*regmap;
@@ -114,23 +114,81 @@ static struct regulator_data reg_data[] = {
 static int pm8008_read(struct regmap *regmap,  u16 reg, u8 *val, int count)
 {
 	int rc;
-
+#ifdef ODM_LQ_EDIT
+#ifndef ODM_TARGET_DEVICE_206B1
+	int i = 0;
+	if ((qpnp_is_power_off_charging() == true) && (charger_type_is_ocp() == true)) {
+			while (i < 200)
+			{
+				if (oppo_vooc_get_allow_reading() == false) {
+					i = i + 1;
+					msleep(50);
+				} else
+					break;
+			}
+	}
+#endif
+#endif
 	rc = regmap_bulk_read(regmap, reg, val, count);
-	if (rc < 0)
+	if (rc < 0){
 		pr_err("failed to read 0x%04x\n", reg);
-
+		msleep(20);
+		rc = regmap_bulk_read(regmap, reg, val, count);
+		if (rc < 0){
+			pr_err("failed to read 0x%04x try again1\n", reg);
+			msleep(20);
+			rc = regmap_bulk_read(regmap, reg, val, count);
+			if (rc < 0){
+				pr_err("failed to read 0x%04x try again2\n", reg);
+				msleep(20);
+				rc = regmap_bulk_read(regmap, reg, val, count);
+				if (rc < 0){
+					pr_err("failed to read 0x%04x try again3\n", reg);
+				}
+			}
+		}
+	}
 	return rc;
 }
 
 static int pm8008_write(struct regmap *regmap, u16 reg, u8 *val, int count)
 {
 	int rc;
-
+#ifdef ODM_LQ_EDIT
+#ifndef ODM_TARGET_DEVICE_206B1
+	int i = 0;
+	if ((qpnp_is_power_off_charging() == true) && (charger_type_is_ocp() == true)) {
+			while (i < 200)
+			{
+				if (oppo_vooc_get_allow_reading() == false) {
+					i = i + 1;
+					msleep(50);
+				} else
+					break;
+			}
+	}
+#endif
+#endif
 	pr_debug("Writing 0x%02x to 0x%04x\n", val, reg);
 	rc = regmap_bulk_write(regmap, reg, val, count);
-	if (rc < 0)
+	if (rc < 0){
 		pr_err("failed to write 0x%04x\n", reg);
-
+		msleep(20);
+		rc = regmap_bulk_write(regmap, reg, val, count);
+		if (rc < 0){
+			pr_err("failed to write 0x%04x try again1\n", reg);
+			msleep(20);
+			rc = regmap_bulk_write(regmap, reg, val, count);
+			if (rc < 0){
+				pr_err("failed to write 0x%04x try again2\n", reg);
+				msleep(20);
+				rc = regmap_bulk_write(regmap, reg, val, count);
+				if (rc < 0){
+					pr_err("failed to write 0x%04x try again3\n", reg);
+				}
+			}
+		}
+    }
 	return rc;
 }
 
@@ -138,13 +196,42 @@ static int pm8008_masked_write(struct regmap *regmap, u16 reg, u8 mask,
 				u8 val)
 {
 	int rc;
-
+#ifdef ODM_LQ_EDIT
+#ifndef ODM_TARGET_DEVICE_206B1
+	int i = 0;
+	if ((qpnp_is_power_off_charging() == true) && (charger_type_is_ocp() == true)) {
+			while (i < 200)
+			{
+				if (oppo_vooc_get_allow_reading() == false) {
+					i = i + 1;
+					msleep(50);
+				} else
+					break;
+			}
+	}
+#endif
+#endif
 	pr_debug("Writing 0x%02x to 0x%04x with mask 0x%02x\n", val, reg, mask);
 	rc = regmap_update_bits(regmap, reg, mask, val);
-	if (rc < 0)
+	if (rc < 0){
 		pr_err("failed to write 0x%02x to 0x%04x with mask 0x%02x\n",
 				val, reg, mask);
-
+		msleep(20);
+		rc = regmap_update_bits(regmap, reg, mask, val);
+		if (rc < 0){
+			pr_err("failed to write 0x%02x to 0x%04x with mask 0x%02x try again1\n",val, reg, mask);
+			msleep(20);
+			rc = regmap_update_bits(regmap, reg, mask, val);
+			if (rc < 0){
+				pr_err("failed to write 0x%02x to 0x%04x with mask 0x%02x try again2\n",val, reg, mask);
+				msleep(20);
+				rc = regmap_update_bits(regmap, reg, mask, val);
+				if (rc < 0){
+					pr_err("failed to write 0x%02x to 0x%04x with mask 0x%02x try again3\n",val, reg, mask);
+				}
+			}
+		}
+	}
 	return rc;
 }
 

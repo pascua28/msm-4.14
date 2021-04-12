@@ -28,6 +28,12 @@
 #include "dsi_ctrl.h"
 #include "dsi_phy.h"
 #include "dsi_panel.h"
+#ifdef VENDOR_EDIT
+/* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/11/21
+ * Add for save select panel and give different feature
+*/
+#include <linux/dsi_oppo_support.h>
+#endif /*VENDOR_EDIT*/
 
 #define DSI_CLIENT_NAME_SIZE		20
 #define MAX_CMDLINE_PARAM_LEN	 512
@@ -179,6 +185,7 @@ struct dsi_display_ext_bridge {
  * @cmdline_topology: Display topology shared from kernel command line.
  * @cmdline_timing:   Display timing shared from kernel command line.
  * @is_tpg_enabled:   TPG state.
+ * @poms_pending;      Flag indicating the pending panel operating mode switch.
  * @ulps_enabled:     ulps state.
  * @clamp_enabled:    clamp state.
  * @phy_idle_power_off:   PHY power state.
@@ -240,6 +247,7 @@ struct dsi_display {
 	int cmdline_topology;
 	int cmdline_timing;
 	bool is_tpg_enabled;
+	bool poms_pending;
 	bool ulps_enabled;
 	bool clamp_enabled;
 	bool phy_idle_power_off;
@@ -372,7 +380,7 @@ int dsi_display_get_mode_count(struct dsi_display *display, u32 *count);
  * dsi_display_get_modes() - get modes supported by display
  * @display:            Handle to display.
  * @modes;              Output param, list of DSI modes. Number of modes matches
- *                      count returned by dsi_display_get_mode_count
+ *                      count got from display->panel->num_display_modes;
  *
  * Return: error code.
  */
@@ -700,6 +708,17 @@ enum dsi_pixel_format dsi_display_get_dst_format(
  * Return: Zero on Success
  */
 int dsi_display_cont_splash_config(void *display);
+#ifdef VENDOR_EDIT
+/* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/10/21
+ * Add for support aod,hbm,seed
+*/
+struct dsi_display *get_main_display(void);
+
+/* Add for implement panel register read */
+int dsi_host_alloc_cmd_tx_buffer(struct dsi_display *display);
+int dsi_display_cmd_engine_enable(struct dsi_display *display);
+int dsi_display_cmd_engine_disable(struct dsi_display *display);
+#endif
 /*
  * dsi_display_get_panel_vfp - get panel vsync
  * @display: Pointer to private display structure

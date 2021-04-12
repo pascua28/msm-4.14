@@ -136,12 +136,18 @@ static struct sysrq_key_op sysrq_unraw_op = {
 static void sysrq_handle_crash(int key)
 {
 	char *killer = NULL;
+	struct task_struct *tsk = NULL;
 
 	/* we need to release the RCU read lock here,
 	 * otherwise we get an annoying
 	 * 'BUG: sleeping function called from invalid context'
 	 * complaint from the kernel before the panic.
 	 */
+#ifdef VENDOR_EDIT
+/*wen.luo@PSW.BSP.Kernel.Stability. 2019/07/11, modify for show the murderer*/
+	tsk = current->group_leader;
+	pr_info("BUG:%s:%d call sysrq-trigger, GroupLeader is %s:%d\n", current->comm, task_pid_nr(current), tsk->comm, task_pid_nr(tsk));
+#endif /*VENDOR_EDIT*/
 	rcu_read_unlock();
 	panic_on_oops = 1;	/* force panic */
 	wmb();
@@ -166,6 +172,21 @@ static struct sysrq_key_op sysrq_reboot_op = {
 	.action_msg	= "Resetting",
 	.enable_mask	= SYSRQ_ENABLE_BOOT,
 };
+
+#ifdef VENDOR_EDIT
+//jason.tang@TECH.BSP.Kernel.Storage, 2019-09-10, add ext4 urgent flush
+extern int panic_flush_device_cache(int timeout);
+static void sysrq_handle_flush(int key)
+{
+	panic_flush_device_cache(0);
+}
+static struct sysrq_key_op sysrq_flush_op = {
+	.handler	= sysrq_handle_flush,
+	.help_msg	= "flush(y)",
+	.action_msg	= "Emergency Flush",
+	.enable_mask	= SYSRQ_ENABLE_SYNC,
+};
+#endif
 
 static void sysrq_handle_sync(int key)
 {
@@ -490,7 +511,12 @@ static struct sysrq_key_op *sysrq_key_table[36] = {
 	/* x: May be registered on sparc64 for global PMU dump */
 	NULL,				/* x */
 	/* y: May be registered on sparc64 for global register dump */
+#ifdef VENDOR_EDIT
+//jason.tang@TECH.BSP.Kernel.Storage, 2019-09-10, add ext4 urgent flush
+	&sysrq_flush_op,                 /* y */
+#else
 	NULL,				/* y */
+#endif
 	&sysrq_ftrace_dump_op,		/* z */
 };
 

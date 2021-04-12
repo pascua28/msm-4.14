@@ -15,6 +15,10 @@
 
 &wcd937x_codec {
 	status = "ok";
+	//def ODM_LQ_EDIT
+	//chengong@ODM_LQ@Multimedia.Audio,2019/10/28,add for micbias
+	qcom,cdc-micbias2-mv = <2700>;
+	//endif
 };
 
 &wcd938x_codec {
@@ -113,3 +117,17 @@
 	qcom,codec-aux-devs = <&wcd937x_codec>;
 };
 
+//def ODM_LQ_EDIT
+//chengong@ODM_LQ@Multimedia.Audio,2019/10/25,add for disable wsa
+&bolero {
+	qcom,num-macros = <3>;
+};
+
+&wsa_macro {
+	status = "disabled";
+};
+
+&wsa_swr_gpios {
+	status = "disabled";
+};
+//endif

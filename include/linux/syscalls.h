@@ -941,4 +941,36 @@ asmlinkage long sys_pkey_free(int pkey);
 asmlinkage long sys_statx(int dfd, const char __user *path, unsigned flags,
 			  unsigned mask, struct statx __user *buffer);
 
+#ifdef VENDOR_EDIT
+//bajrang.patidar@BSP.Kernel.SHUTDOWN_DETECT, 2019/11/12   for shutdown_detect driver from common branch
+
+static inline long ksys_open(const char __user *filename,
+                                int flags, umode_t mode){
+    return sys_open(filename, flags, mode);
+}
+
+static inline long ksys_write(unsigned int fd, const char __user *buf,
+			  size_t count)
+{
+    return sys_write(fd, buf, count);
+}
+
+static inline long ksys_lseek(unsigned int fd, off_t offset,
+                          unsigned int whence)
+{
+    return sys_lseek(fd, offset, whence);
+}
+
+static inline long ksys_sync(void)
+{
+    return sys_sync();
+}
+
+static inline long ksys_close(unsigned int fd)
+{
+    return sys_close(fd);
+}
+
+#endif /*VENDOR_EDIT*/
+
 #endif

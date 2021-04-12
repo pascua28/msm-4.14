@@ -114,7 +114,12 @@
 	pinctrl-0 = <&sdc2_clk_on  &sdc2_cmd_on &sdc2_data_on &sdc2_cd_on>;
 	pinctrl-1 = <&sdc2_clk_off &sdc2_cmd_off &sdc2_data_off &sdc2_cd_off>;
 
-	cd-gpios = <&tlmm 69 GPIO_ACTIVE_LOW>;
+/*#ifndef ODM_LQ_EDIT*/
+/*liujiawei@ODM_LQ@BSP.Tcard,2019/10/09,modified for bring up Tcard hot-plug*/
+	//cd-gpios = <&tlmm 69 GPIO_ACTIVE_LOW>;
+/*#else*/
+	cd-gpios = <&tlmm 69 GPIO_ACTIVE_HIGH>;
+/*#endif*/
 
 	status = "ok";
 };
@@ -139,10 +144,16 @@
 		status = "disabled";
 	};
 };
-
-&pm6150a_amoled {
+/*#ifndef ODM_LQ_EDIT*/
+/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/03,modified for bring up LCD*/
+/*&pm6150a_amoled {
 	status = "ok";
+};*/
+/*else ODM_LQ_EDIT*/
+&pm6150l_lcdb {
+    status = "ok";
 };
+/*#endif ODM_LQ_EDIT*/
 
 &pm6150_qg {
 	qcom,battery-data = <&mtp_batterydata>;
@@ -159,23 +170,48 @@
 		      <&pm6150_vadc ADC_DIE_TEMP>,
 		      <&pm6150_vadc ADC_AMUX_THM3_PU2>,
 		      <&pm6150_vadc ADC_SBUx>,
-		      <&pm6150_vadc ADC_VPH_PWR>;
+//#ifdef VENDOR_EDIT
+/* Yichun.Chen  PSW.BSP.CHG  2019-04-22  for usbtemp */
+		      <&pm6150_vadc ADC_AMUX_THM3>,
+		      <&pm6150_vadc ADC_AMUX_THM2>,
+//#endif
+//#ifndef VENDOR_EDIT
+/* Yichun.Chen  PSW.BSP.CHG  2019-04-13  for read chargerid */
+//		      <&pm6150_vadc ADC_VPH_PWR>;
+//#else
+		      <&pm6150_vadc ADC_VPH_PWR>,
+		      <&pm6150l_vadc ADC_GPIO2>;
+//#endif
 	io-channel-names = "usb_in_voltage",
 			   "usb_in_current",
 			   "chg_temp",
 			   "die_temp",
 			   "conn_temp",
 			   "sbux_res",
-			   "vph_voltage";
+//#ifdef VENDOR_EDIT
+/* Yichun.Chen  PSW.BSP.CHG  2019-04-22  for usbtemp */
+			   "usb_temp1",
+			   "usb_temp2",
+//#endif
+//#ifndef VENDOR_EDIT
+/* Yichun.Chen  PSW.BSP.CHG  2019-04-13  for read chargerid */
+//			   "vph_voltage";
+//#else
+			   "vph_voltage",
+			   "chgid_voltage";
+//#endif
 	qcom,battery-data = <&mtp_batterydata>;
-	qcom,auto-recharge-soc = <98>;
-	qcom,step-charging-enable;
-	qcom,sw-jeita-enable;
-	qcom,fcc-stepping-enable;
-	qcom,suspend-input-on-debug-batt;
-	qcom,sec-charger-config = <3>;
-	qcom,thermal-mitigation = <4200000 3500000 3000000
-			2500000 2000000 1500000 1000000 500000>;
+//#ifndef VENDOR_EDIT
+/* Yichun.Chen  PSW.BSP.CHG  2019-05-05  for charge */
+//	qcom,auto-recharge-soc = <98>;
+//	qcom,step-charging-enable;
+//	qcom,sw-jeita-enable;
+//	qcom,fcc-stepping-enable;
+//	qcom,suspend-input-on-debug-batt;
+//	qcom,sec-charger-config = <3>;
+//	qcom,thermal-mitigation = <4200000 3500000 3000000
+//			2500000 2000000 1500000 1000000 500000>;
+//#endif
 	dpdm-supply = <&qusb_phy0>;
 	qcom,charger-temp-max = <800>;
 	qcom,smb-temp-max = <800>;
@@ -204,7 +240,13 @@
 		label = "gpio-keys";
 
 		pinctrl-names = "default";
-		pinctrl-0 = <&key_vol_up_default>;
+/*#ifndef ODM_LQ_EDIT*/
+/*Hongbin.Chen@ODM_LQ@BSP.Key,2019/10/08 Modify for config volum down key*/
+/*		pinctrl-0 = <&key_vol_up_default>;*/
+/*#else*/
+		pinctrl-0 = <&key_vol_up_default
+			&key_vol_down_default>;
+/*#endif  ODM_LQ_EDIT*/
 
 		vol_up {
 			label = "volume_up";
@@ -215,13 +257,31 @@
 			debounce-interval = <15>;
 			gpio-key,wakeup;
 		};
+/*#ifdef ODM_LQ_EDIT*/
+/*Hongbin.Chen@ODM_LQ@BSP.Key,2019/10/08 Modify for config volum down key*/
+		vol_down {
+			label = "volume_down";
+			gpios = <&tlmm 117 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
+			linux,code = <KEY_VOLUMEDOWN>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+			linux,can-disable;
+		};
+/*#endif  ODM_LQ_EDIT*/
 	};
 };
 
 &qupv3_se7_i2c {
-	status = "ok";
+/*#ifndef ODM_LQ_EDIT*/
+/*liujiawei@ODM_LQ@BSP.CHG,2019/10/08,modified for disable qupv3_se7_i2c*/
+//	status = "ok";
+/*#else*/
+	status = "disabled";
+/*#endif*/
 
 	qcom,i2c-touch-active = "synaptics,tcm-i2c";
+
 	synaptics_tcm@20 {
 		compatible = "synaptics,tcm-i2c";
 		reg = <0x20>;
@@ -284,6 +344,30 @@
 	qcom,platform-reset-gpio = <&pm6150l_gpios 3 0>;
 };
 
+/*#ifdef ODM_LQ_EDIT*/
+/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/03,modified for bring up LCD*/
+&dsi_hx83112a_dsbj_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,platform-te-gpio = <&tlmm 10 0>;
+	qcom,platform-reset-gpio = <&pm6150l_gpios 3 0>;
+};
+/*#endif ODM_LQ_EDIT*/
+
+/*#ifdef ODM_LQ_EDIT*/
+/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/25,add for bringup C-PHY LCD*/
+&dsi_nt36672c_boe_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <2047>;
+	qcom,platform-te-gpio = <&tlmm 10 0>;
+	qcom,platform-reset-gpio = <&pm6150l_gpios 3 0>;
+};
+/*#endif ODM_LQ_EDIT*/
+
 &dsi_nt36672c_video {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
@@ -316,9 +400,38 @@
 		pinctrl-1 = <&nfc_int_suspend &nfc_enable_suspend
 				&nfc_clk_req_suspend>;
 	};
+
+	/*#ifdef ODM_LQ_EDIT*/
+	/*shentaotao@ODM_LQ@Multimedia.Audio,2019/10/08,modified for audio bringup*/
+	/* NXP TFA9874 smartPA start */
+	tfa98xx@34 {
+		compatible = "nxp,tfa98xx";
+		reg = <0x34>;
+		reset-gpio = <&tlmm 51 0>;
+		irq-gpio = <&tlmm 68 0>;
+	};
+	/* NXP TFA9874 smartPA end */
+
+	/* AWINIC AW882XX Smart PA start*/
+	aw882xx_smartpa@35 {
+		compatible = "awinic,aw882xx_smartpa";
+		reg = <0x35>;
+		reset-gpio = <&tlmm 51 0>;
+		irq-gpio = <&tlmm 68 0x2008>;
+		monitor-flag = <1>;
+		monitor-timer-val = <3000>;
+		status = "okay";
+	};
+	/* AWINIC AW882XX Smart PA end */
+	/*#endif ODM_LQ_EDIT*/
 };
 
 &sde_dp{
 	qcom,dp-aux-switch = <&fsa4480>;
 };
+
+//#ifdef VENDOR_EDIT
+///* Yichun.Chen  PSW.BSP.CHG  2019-05-30  oppo charge edit dts */
+#include "oppo-charge.dtsi"
+//#endif
 

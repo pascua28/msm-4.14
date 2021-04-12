@@ -213,6 +213,9 @@ struct cam_flash_ctrl {
 	struct camera_io_master             io_master_info;
 	struct i2c_data_settings            i2c_data;
 	uint32_t                            last_flush_req;
+
+    /* Add by yaoqiang.Huang@Camera 20191012 for flash */
+    const char *flash_name;
 };
 
 int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg);
@@ -220,6 +223,12 @@ int cam_flash_i2c_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg);
 int cam_flash_pmic_apply_setting(struct cam_flash_ctrl *fctrl, uint64_t req_id);
 int cam_flash_i2c_apply_setting(struct cam_flash_ctrl *fctrl, uint64_t req_id);
 int cam_flash_off(struct cam_flash_ctrl *fctrl);
+
+/* Add by yaoqiang.Huang@Camera 20191012 for flash */
+int cam_flash_on(struct cam_flash_ctrl *flash_ctrl,
+	struct cam_flash_frame_setting *flash_data,
+	int mode);
+
 int cam_flash_pmic_power_ops(struct cam_flash_ctrl *fctrl,
 	bool regulator_enable);
 int cam_flash_i2c_power_ops(struct cam_flash_ctrl *fctrl,

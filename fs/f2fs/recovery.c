@@ -651,6 +651,19 @@ static int recover_data(struct f2fs_sb_info *sbi, struct list_head *inode_list,
 			break;
 		}
 
+		if (PageChecked(page)) {
+			f2fs_msg(sbi->sb, KERN_ERR, "Abandon looped node block list");
+			f2fs_put_page(page, 1);
+			err = -EINVAL;
+			break;
+		}
+
+		/*
+		 * it's not needed to clear PG_checked flag in temp page since we
+		 * will truncate all those pages in the end of recovery.
+		 */
+		SetPageChecked(page);
+
 		if (!is_recoverable_dnode(page)) {
 			f2fs_put_page(page, 1);
 			break;
