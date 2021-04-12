@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -331,6 +331,14 @@ static int diagchar_open(struct inode *inode, struct file *file)
 	if (driver) {
 		mutex_lock(&driver->diagchar_mutex);
 
+		for (i = 0; i < driver->num_clients; i++) {
+			if (driver->client_map[i].pid == current->tgid) {
+				pr_err_ratelimited("diag: Client already present current->tgid: %d\n",
+					current->tgid);
+				mutex_unlock(&driver->diagchar_mutex);
+				return -EEXIST;
+			}
+		}
 		for (i = 0; i < driver->num_clients; i++)
 			if (driver->client_map[i].pid == 0)
 				break;
@@ -568,6 +576,7 @@ static int diag_remove_client_entry(struct file *file)
 		return -EINVAL;
 	}
 
+	mutex_lock(&driver->diagchar_mutex);
 	diagpriv_data = file->private_data;
 	for (i = 0; i < driver->num_clients; i++)
 		if (diagpriv_data && diagpriv_data->pid ==
@@ -577,11 +586,13 @@ static int diag_remove_client_entry(struct file *file)
 		DIAG_LOG(DIAG_DEBUG_USERSPACE,
 			"pid %d, not present in client map\n",
 			diagpriv_data->pid);
+		mutex_unlock(&driver->diagchar_mutex);
 		mutex_unlock(&driver->diag_file_mutex);
 		return -EINVAL;
 	}
 	DIAG_LOG(DIAG_DEBUG_USERSPACE, "diag: %s process exit with pid = %d\n",
 		driver->client_map[i].name, diagpriv_data->pid);
+	mutex_unlock(&driver->diagchar_mutex);
 	/*
 	 * clean up any DCI registrations, if this is a DCI client
 	 * This will specially help in case of ungraceful exit of any DCI client
@@ -3623,9 +3634,12 @@ static ssize_t diagchar_read(struct file *file, char __user *buf, size_t count,
 	int proc = 0;
 
 	mutex_lock(&driver->diagchar_mutex);
-	for (i = 0; i < driver->num_clients; i++)
-		if (driver->client_map[i].pid == current->tgid)
+	for (i = 0; i < driver->num_clients; i++) {
+		if (driver->client_map[i].pid == current->tgid) {
 			index = i;
+			break;
+		}
+	}
 	mutex_unlock(&driver->diagchar_mutex);
 
 	if (index == -1) {
@@ -4427,10 +4441,12 @@ static int __init diagchar_init(void)
 	driver->pcie_switch_pid = 0;
 	driver->rsp_buf_ctxt = SET_BUF_CTXT(APPS_DATA, TYPE_CMD, TYPE_CMD);
 	hdlc_data.ctxt = SET_BUF_CTXT(APPS_DATA, TYPE_DATA, 1);
+	hdlc_data.ctxt |= SET_HDLC_CTXT(HDLC_CTXT);
 	hdlc_data.len = 0;
 	hdlc_data.allocated = 0;
 	hdlc_data.flushed = 0;
 	non_hdlc_data.ctxt = SET_BUF_CTXT(APPS_DATA, TYPE_DATA, 1);
+	non_hdlc_data.ctxt |= SET_HDLC_CTXT(NON_HDLC_CTXT);
 	non_hdlc_data.len = 0;
 	non_hdlc_data.allocated = 0;
 	non_hdlc_data.flushed = 0;
