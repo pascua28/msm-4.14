@@ -1,29 +1,38 @@
 # SPDX-License-Identifier: GPL-2.0
-dts-dirs += actions
-dts-dirs += al
-dts-dirs += allwinner
-dts-dirs += altera
-dts-dirs += amd
-dts-dirs += amlogic
-dts-dirs += apm
-dts-dirs += arm
-dts-dirs += broadcom
-dts-dirs += cavium
-dts-dirs += exynos
-dts-dirs += freescale
-dts-dirs += hisilicon
-dts-dirs += marvell
-dts-dirs += mediatek
-dts-dirs += nvidia
-dts-dirs += qcom
-dts-dirs += realtek
-dts-dirs += renesas
-dts-dirs += rockchip
-dts-dirs += socionext
-dts-dirs += sprd
-dts-dirs += xilinx
-dts-dirs += lg
-dts-dirs += zte
+# dts-dirs += actions
+# dts-dirs += al
+# dts-dirs += allwinner
+# dts-dirs += altera
+# dts-dirs += amd
+# dts-dirs += amlogic
+# dts-dirs += apm
+# dts-dirs += arm
+# dts-dirs += broadcom
+# dts-dirs += cavium
+# dts-dirs += exynos
+# dts-dirs += freescale
+# dts-dirs += hisilicon
+# dts-dirs += marvell
+# dts-dirs += mediatek
+# dts-dirs += nvidia
+# dts-dirs += qcom
+# dts-dirs += realtek
+# dts-dirs += renesas
+# dts-dirs += rockchip
+# dts-dirs += socionext
+# dts-dirs += sprd
+# dts-dirs += xilinx
+# dts-dirs += lg
+# dts-dirs += zte
+# dts-dirs += 19031
+# dts-dirs += 19111
+#shentaotao@ODM_LQ@BSP.Bringup,2020/05/02,modified for dts folder build -start
+ifeq ($(CONFIG_MSM_206B1),y)
+dts-dirs += 206B1
+else
+dts-dirs += 19721
+endif
+#shentaotao@ODM_LQ@BSP.Bringup,2020/05/02,modified for dts folder build -end
 
 subdir-y	:= $(dts-dirs)
 

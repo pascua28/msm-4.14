@@ -149,8 +149,14 @@
 				&cam_sensor_rear_active>;
 		pinctrl-1 = <&cam_sensor_mclk0_suspend
 				&cam_sensor_rear_suspend>;
+/*#ifndef ODM_LQ_EDIT*/
+/* liujiawei  ODM.BSP.CHG  2019-10-10  for charge */
+		//gpios = <&tlmm 13 0>,
+		//	<&tlmm 30 0>;
+/*#else*/
 		gpios = <&tlmm 13 0>,
-			<&tlmm 30 0>;
+			<&tlmm 21 0>;
+/*#endif*/
 		gpio-reset = <1>;
 		gpio-req-tbl-num = <0 1>;
 		gpio-req-tbl-flags = <1 0>;
@@ -342,8 +348,14 @@
 				&cam_sensor_rear_active>;
 		pinctrl-1 = <&cam_sensor_mclk0_suspend
 				&cam_sensor_rear_suspend>;
+/*#ifndef ODM_LQ_EDIT*/
+/* liujiawei  ODM.BSP.CHG  2019-10-10  for charge */
+		//gpios = <&tlmm 13 0>,
+		//	<&tlmm 30 0>;
+/*#else*/
 		gpios = <&tlmm 13 0>,
-			<&tlmm 30 0>;
+			<&tlmm 21 0>;
+/*#endif*/
 		gpio-reset = <1>;
 		gpio-req-tbl-num = <0 1>;
 		gpio-req-tbl-flags = <1 0>;

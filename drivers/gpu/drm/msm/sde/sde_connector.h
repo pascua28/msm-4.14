@@ -811,9 +811,15 @@ static inline bool sde_connector_needs_offset(struct drm_connector *connector)
  * @idle_pc: flag to indicate idle_pc_restore happened
  * Returns: Zero on success
  */
+#ifdef ODM_TARGET_DEVICE_206B1
+int sde_connector_get_dither_cfg(struct drm_connector *conn,
+		struct drm_connector_state *state, void **cfg,
+		size_t *len);
+#else
 int sde_connector_get_dither_cfg(struct drm_connector *conn,
 		struct drm_connector_state *state, void **cfg,
 		size_t *len, bool idle_pc);
+#endif
 
 /**
  * sde_connector_set_blob_data - set connector blob property data

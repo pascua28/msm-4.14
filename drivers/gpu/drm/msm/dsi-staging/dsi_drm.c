@@ -444,6 +444,13 @@ static bool dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 			 display->is_cont_splash_enabled))
 			dsi_mode.dsi_mode_flags |= DSI_MODE_FLAG_DMS;
 
+			#ifdef VENDOR_EDIT
+			if (crtc_state->active_changed && (dsi_mode.dsi_mode_flags & DSI_MODE_FLAG_DYN_CLK)) {
+				pr_debug("dyn clk changed when active_changed, WA to skip dyn clk change\n");
+				dsi_mode.dsi_mode_flags &= ~DSI_MODE_FLAG_DYN_CLK;
+			}
+			#endif
+
 		/* Reject seemless transition when active/connectors changed.*/
 		if ((crtc_state->active_changed ||
 			(crtc_state->connectors_changed && clone_mode)) &&

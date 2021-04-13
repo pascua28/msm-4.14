@@ -773,12 +773,12 @@ static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep,
 
 		init_waitqueue_head(&dep->wait_end_transfer);
 
-		if (usb_endpoint_xfer_control(desc))
-			goto out;
-
 		/* Initialize the TRB ring */
 		dep->trb_dequeue = 0;
 		dep->trb_enqueue = 0;
+		if (usb_endpoint_xfer_control(desc))
+			goto out;
+
 		memset(dep->trb_pool, 0,
 		       sizeof(struct dwc3_trb) * DWC3_TRB_NUM);
 
@@ -835,7 +835,7 @@ static void dwc3_remove_requests(struct dwc3 *dwc, struct dwc3_ep *dep)
 	dbg_log_string("START for %s(%d)", dep->name, dep->number);
 	dwc3_stop_active_transfer(dwc, dep->number, true);
 
-	if (dep->number == 1 && dwc->ep0state != EP0_SETUP_PHASE) {
+	if (dep->number == 0 && dwc->ep0state != EP0_SETUP_PHASE) {
 		unsigned int dir;
 
 		dbg_log_string("CTRLPEND", dwc->ep0state);
@@ -885,6 +885,10 @@ static void dwc3_stop_active_transfers(struct dwc3 *dwc)
 				DWC3_CONTROLLER_NOTIFY_CLEAR_DB, 0);
 
 		dwc3_remove_requests(dwc, dep);
+		if (dep->trb_pool) {
+			memset(&dep->trb_pool[0], 0, sizeof(struct dwc3_trb) * dep->num_trbs);
+			dbg_event(dep->number, "Clr_TRB", 0);
+		}
 	}
 	dbg_log_string("DONE");
 }
@@ -2073,6 +2077,11 @@ static int dwc3_gadget_set_selfpowered(struct usb_gadget *g,
 	return 0;
 }
 
+#ifdef VENDOR_EDIT
+/* Yichun.Chen  PSW.BSP.CHG  2019-08-07  for detect CDP */
+#define DWC3_SOFT_RESET_TIMEOUT		10 /* 10 msec */
+#endif
+
 /**
  * dwc3_device_core_soft_reset - Issues device core soft reset
  * @dwc: pointer to our context structure
@@ -2110,6 +2119,11 @@ static int dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on, int suspend)
 	u32			reg, reg1;
 	u32			timeout = 1500;
 
+#ifdef VENDOR_EDIT
+/* Yichun.Chen  PSW.BSP.CHG  2019-08-07  for detect CDP */
+	ktime_t start, diff;
+#endif
+
 	dbg_event(0xFF, "run_stop", is_on);
 	reg = dwc3_readl(dwc->regs, DWC3_DCTL);
 	if (is_on) {
@@ -2120,6 +2134,27 @@ static int dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on, int suspend)
 
 		if (dwc->revision >= DWC3_REVISION_194A)
 			reg &= ~DWC3_DCTL_KEEP_CONNECT;
+
+#ifdef VENDOR_EDIT
+/* Yichun.Chen  PSW.BSP.CHG  2019-08-07  for detect CDP */
+		start = ktime_get();
+		/* issue device SoftReset */
+		dwc3_writel(dwc->regs, DWC3_DCTL, reg | DWC3_DCTL_CSFTRST);
+		do {
+			reg = dwc3_readl(dwc->regs, DWC3_DCTL);
+			if (!(reg & DWC3_DCTL_CSFTRST))
+				break;
+
+			diff = ktime_sub(ktime_get(), start);
+			/* poll for max. 10ms */
+			if (ktime_to_ms(diff) > DWC3_SOFT_RESET_TIMEOUT) {
+				printk_ratelimited(KERN_ERR
+					"%s:core Reset Timed Out\n", __func__);
+				break;
+			}
+			cpu_relax();
+		} while (true);
+#endif
 
 		dwc3_event_buffers_setup(dwc);
 		__dwc3_gadget_start(dwc);
@@ -2468,6 +2503,7 @@ static int __dwc3_gadget_start(struct dwc3 *dwc)
 
 	/* begin to receive SETUP packets */
 	dwc->ep0state = EP0_SETUP_PHASE;
+        dwc->ep0_bounced = false;
 	dwc->link_state = DWC3_LINK_STATE_SS_DIS;
 	dwc3_ep0_out_start(dwc);
 
@@ -3052,6 +3088,7 @@ static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
 
 		if (cmd == DWC3_DEPCMD_ENDTRANSFER) {
 			dep->flags &= ~DWC3_EP_END_TRANSFER_PENDING;
+			dbg_event(0xFF, "DWC3_DEPEVT_EPCMDCMPLT", dep->number);
 			wake_up(&dep->wait_end_transfer);
 		}
 		break;
@@ -3300,6 +3337,8 @@ static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 			dwc3_ep0_end_control_data(dwc, dwc->eps[dir]);
 		else
 			dwc3_ep0_end_control_data(dwc, dwc->eps[!dir]);
+                dwc->eps[0]->trb_enqueue = 0;
+                dwc->eps[1]->trb_enqueue = 0;
 		dwc3_ep0_stall_and_restart(dwc);
 	}
 

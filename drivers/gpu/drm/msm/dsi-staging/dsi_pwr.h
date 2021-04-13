@@ -112,4 +112,13 @@ int dsi_pwr_enable_regulator(struct dsi_regulator_info *regs, bool enable);
 int dsi_pwr_panel_regulator_mode_set(struct dsi_regulator_info *regs,
 					const char *reg_name,
 					int regulator_mode);
+
+#ifdef ODM_LQ_EDIT
+/* add begin by zhangchaofan@ODM_LQ@Multimedia.TP, for tp gesture 2019-11-26*/
+extern int tp_gesture_enable_flag(void);
+/* add end by zhangchaofan@ODM_LQ@Multimedia.TP, for tp gesture 2019-11-26 */
+/* add begin by zhangchaofan@ODM_LQ@Multimedia.TP, add tp esd flag 2019-12-05*/
+extern bool tp_gesture_esd_flag;
+/* add end by zhangchaofan@ODM_LQ@Multimedia.TP, add tp esd flag 2019-12-05 */
+#endif /*ODM_LQ_EDIT*/
 #endif /* _DSI_PWR_H_ */

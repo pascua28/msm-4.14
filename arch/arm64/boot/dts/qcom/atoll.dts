@@ -19,4 +19,5 @@
 	compatible = "qcom,atoll";
 	qcom,pmic-name = "PM6150";
 	qcom,board-id = <0 0>;
+	//oppo,project = <19721 19759>;
 };

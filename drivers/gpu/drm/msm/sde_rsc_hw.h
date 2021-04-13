@@ -98,7 +98,13 @@
 #define SDE_RSCC_F0_QTMR_V1_CNTP_CTL			0x202C
 #define SDE_RSCC_F1_QTMR_V1_CNTP_CTL			0x302C
 
+#ifndef ODM_TARGET_DEVICE_206B1
+/*zengjianxiong@ODM.MM.Display modify for caton caused by too many retry*/
 #define MAX_CHECK_LOOPS			500
+#else
+#define MAX_CHECK_LOOPS			10
+#endif
+
 #define POWER_CTRL_BIT_12		12
 
 #define SDE_RSC_MODE_0_VAL		0

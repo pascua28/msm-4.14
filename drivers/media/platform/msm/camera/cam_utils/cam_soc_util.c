@@ -977,10 +977,11 @@ static int cam_soc_util_get_gpio_info(struct cam_hw_soc_info *soc_info)
 
 	gpio_array_size = of_gpio_count(of_node);
 
+    CAM_DBG(CAM_UTIL, "gpio count %d", gpio_array_size);
 	if (gpio_array_size <= 0)
 		return 0;
 
-	CAM_DBG(CAM_UTIL, "gpio count %d", gpio_array_size);
+	
 
 	gpio_array = kcalloc(gpio_array_size, sizeof(uint16_t), GFP_KERNEL);
 	if (!gpio_array)

@@ -316,7 +316,13 @@
 					  "flash-irq";
 			qcom,pmic-revid = <&pm6150l_revid>;
 			qcom,auto-calibration;
-			status = "disabled";
+			/*#ifdef ODM_LQ_EDIT*/
+			/*zhangjialong@ODM_LQ@Multimedia.Dispaly,2019/10/16,modified for change Maximum backlight current = 20mA*/
+			qcom,fs-current-limit = <20000>;
+			/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/03,modified for bring up LCD*/
+			qcom,string-cfg = <3>;
+			status = "ok";
+			/*#endif ODM_LQ_EDIT*/
 
 			wled_flash: qcom,wled-flash {
 				label = "flash";

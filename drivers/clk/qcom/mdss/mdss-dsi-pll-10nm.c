@@ -806,9 +806,16 @@ static int dsi_pll_read_stored_trim_codes(struct mdss_pll_resources *pll_res,
 			codes_info->pll_codes.pll_codes_2,
 			codes_info->pll_codes.pll_codes_3);
 
+		#ifdef VENDOR_EDIT
+		/*Mark.Yao@PSW.MM.Display.LCD.Params,2019-11-17 fix mipi clk setting error */
+		if ((vco_clk_rate / 1000) != (codes_info->clk_rate / 1000) &&
+				codes_info->is_valid) {
+		#else
 		if (vco_clk_rate != codes_info->clk_rate &&
-				codes_info->is_valid)
-			continue;
+				codes_info->is_valid) {
+		#endif /* VENDOR_EDIT */
+				continue;
+		}
 
 		pll_res->cache_pll_trim_codes[0] =
 			codes_info->pll_codes.pll_codes_1;
@@ -1196,17 +1203,11 @@ static void vco_10nm_unprepare(struct clk_hw *hw)
 	 * Also handle use cases where dynamic refresh triggered before
 	 * first suspend/resume.
 	 */
-	if (!pll->handoff_resources || pll->dfps_trigger) {
-		pll->cached_cfg0 = MDSS_PLL_REG_R(pll->phy_base,
-						  PHY_CMN_CLK_CFG0);
-		pll->cached_outdiv = MDSS_PLL_REG_R(pll->pll_base,
-						    PLL_PLL_OUTDIV_RATE);
-		pr_debug("cfg0=%d,cfg1=%d, outdiv=%d\n", pll->cached_cfg0,
-			 pll->cached_cfg1, pll->cached_outdiv);
-
-		pll->vco_cached_rate = clk_get_rate(hw->clk);
-	}
-
+	pll->cached_cfg0 = MDSS_PLL_REG_R(pll->phy_base,
+	 				    PHY_CMN_CLK_CFG0);
+	pll->cached_outdiv = MDSS_PLL_REG_R(pll->pll_base,
+					    PLL_PLL_OUTDIV_RATE);
+	pll->vco_cached_rate = clk_get_rate(hw->clk);
 	/*
 	 * When continuous splash screen feature is enabled, we need to cache
 	 * the mux configuration for the pixel_clk_src mux clock. The clock

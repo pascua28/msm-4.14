@@ -671,7 +671,14 @@ static int mmc_devfreq_create_freq_table(struct mmc_host *host)
 				mmc_hostname(host), clk_scaling->freq_table[i]);
 		break;
 	}
-
+#ifdef VENDOR_EDIT
+/* 2020-10-13, Qcom patch to fix T-card frequence problem */
+	if (mmc_card_sd(host->card) && (clk_scaling->freq_table_sz < 2)) {
+		clk_scaling->freq_table[clk_scaling->freq_table_sz] =
+			host->card->clk_scaling_highest;
+		clk_scaling->freq_table_sz++;
+	}
+#endif
 out:
 	/**
 	 * devfreq requires unsigned long type freq_table while the
@@ -3234,8 +3241,8 @@ int mmc_resume_bus(struct mmc_host *host)
 {
 	unsigned long flags;
 	int err = 0;
-	int card_present = true;
-
+    int card_present = true;
+    
 	if (!mmc_bus_needs_resume(host))
 		return -EINVAL;
 
@@ -4428,7 +4435,11 @@ void mmc_stop_host(struct mmc_host *host)
 	}
 
 	host->rescan_disable = 1;
+#ifndef VENDOR_EDIT //yixue.ge@bsp.drv modify
 	cancel_delayed_work_sync(&host->detect);
+#else
+	cancel_delayed_work(&host->detect);
+#endif
 
 	/* clear pm flags now and let card drivers set them as needed */
 	host->pm_flags = 0;
@@ -4559,7 +4570,6 @@ static int mmc_pm_notify(struct notifier_block *notify_block,
 		host->rescan_disable = 0;
 		if (host->ops->get_cd)
 			present = host->ops->get_cd(host);
-
 		if (mmc_bus_manual_resume(host) &&
 				!host->ignore_bus_resume_flags &&
 				present) {

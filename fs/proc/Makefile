@@ -3,6 +3,10 @@
 # Makefile for the Linux proc filesystem routines.
 #
 
+#ifdef VENDOR_EDIT
+#/* Wen.Luo@BSP.Kernel.Stability, 2019/04/26, Add for ksgl memory statistics */
+ccflags-$(CONFIG_ARCH_QCOM) += -I$(srctree)/drivers/gpu/msm/
+#endif
 obj-y   += proc.o
 
 CFLAGS_task_mmu.o	+= $(call cc-option,-Wno-override-init,)
@@ -33,3 +37,11 @@ proc-$(CONFIG_PROC_KCORE)	+= kcore.o
 proc-$(CONFIG_PROC_VMCORE)	+= vmcore.o
 proc-$(CONFIG_PRINTK)	+= kmsg.o
 proc-$(CONFIG_PROC_PAGE_MONITOR)	+= page.o
+#ifdef VENDOR_EDIT
+#Huacai.Zhou@PSW.BSP.kernel.Peformance, 2018/06/18, add foreground process opt support
+proc-$(CONFIG_OPPO_FG_OPT)     += fg_uid.o
+#endif /* VENDOR_EDIT */
+#ifdef VENDOR_EDIT
+#Hailong.Liu@TECH.Kernel.CPU, 2019/10/24, stat cpu usage on each tick.
+proc-y	+= task_cpustats.o
+#endif /* VENDOR_EDIT */

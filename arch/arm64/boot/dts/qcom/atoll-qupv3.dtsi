@@ -396,7 +396,13 @@
 		dmas = <&gpi_dma1 0 4 1 64 0>,
 			<&gpi_dma1 1 4 1 64 0>;
 		dma-names = "tx", "rx";
-		status = "disabled";
+	/*#ifndef ODM_LQ_EDIT*/
+	/*zengjianxiong@ODM_LQ@BSP.Touch,2019/10/03
+	,modified for bring up TP*/
+		/*status = "disabled";*/
+	/*else ODM_LQ_EDIT*/
+		status = "ok";
+	/*#endif ODM_LQ_EDIT*/
 	};
 
 	qupv3_se11_spi: spi@a94000 {

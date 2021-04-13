@@ -279,6 +279,7 @@ static const u8 wled5_brt_wid_sel_reg[MOD_MAX] = {
 };
 
 static int wled_flash_setup(struct wled *wled);
+static int wled5_cabc_config(struct wled *wled, bool enable);
 
 static inline bool is_wled4(struct wled *wled)
 {
@@ -408,10 +409,27 @@ static int wled5_set_brightness(struct wled *wled, u16 brightness)
 	int rc, offset;
 	u16 low_limit = wled->max_brightness * 1 / 1000;
 	u8 val, v[2], brightness_msb_mask;
+	static bool low_brightness_cabc_enable =true;
 
 	/* WLED5's lower limit is 0.1% */
 	if (brightness > 0 && brightness < low_limit)
 		brightness = low_limit;
+
+	#ifdef ODM_LQ_EDIT
+	/*zengjianixong@ODM_LQ@Multimedia.Dispaly,2020/03/09,close cabc when low brightness */
+	if(brightness<61 && low_brightness_cabc_enable)
+	{
+           low_brightness_cabc_enable =false;
+	   rc = wled5_cabc_config(wled,low_brightness_cabc_enable);
+	   pr_err("wled5 close cabc when low brightness:%d,cabc enable:%d\n",brightness,low_brightness_cabc_enable);
+	}
+	else if(brightness>60 && !low_brightness_cabc_enable)
+	{
+	   low_brightness_cabc_enable=true;
+	   rc = wled5_cabc_config(wled,low_brightness_cabc_enable);
+	   pr_err("wled5 reopen cabc when high brightness:%d,cabc enable:%d\n",brightness,low_brightness_cabc_enable);
+	}
+	#endif /*ODM_LQ_EDIT*/
 
 	brightness_msb_mask = 0xf;
 	if (wled->max_brightness == WLED_MAX_BRIGHTNESS_15B)

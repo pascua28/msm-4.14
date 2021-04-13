@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -228,7 +228,7 @@ int ufs_qcom_ice_init(struct ufs_qcom_host *qcom_host)
 	qcom_host->dbg_print_en |= UFS_QCOM_ICE_DEFAULT_DBG_PRINT_EN;
 	if (!ice_workqueue) {
 		ice_workqueue = alloc_workqueue("ice-set-key",
-			WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_FREEZABLE, 0);
+			WQ_MEM_RECLAIM | WQ_HIGHPRI, 0);
 		if (!ice_workqueue) {
 			dev_err(ufs_dev, "%s: workqueue allocation failed.\n",
 			__func__);
