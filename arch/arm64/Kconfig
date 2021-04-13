@@ -247,6 +247,9 @@ config NEED_SG_DMA_LENGTH
 #ChenYong@Rom.Framework,2019/01/15, use for kevent upload
 config OPPO_KEVENT_UPLOAD
 	def_bool y
+
+config MSM_206B1
+	def_bool y
 #endif/* VENDOR_EDIT */
 
 config SMP
