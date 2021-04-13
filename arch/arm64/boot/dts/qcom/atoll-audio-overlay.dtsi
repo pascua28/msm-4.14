@@ -132,6 +132,10 @@
 		qcom,wsa-bcl-pmic-params = /bits/ 8 <0x00 0x00 0x1E>;
 		qcom,default-clk-id = <TX_CORE_CLK>;
 		swr0: wsa_swr_master {
+			/*#ifdef ODM_LQ_EDIT*/
+			/*shentaotao@ODM_LQ@Multimedia.Audio,2019/10/08,modified for audio bringup*/
+			status = "disabled";
+			/*#endif ODM_LQ_EDIT*/
 			compatible = "qcom,swr-mstr";
 			#address-cells = <2>;
 			#size-cells = <0>;
@@ -378,19 +382,35 @@
 	asoc-codec  = <&stub_codec>, <&bolero>, <&ext_disp_audio_codec>;
 	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
 				"msm-ext-disp-audio-codec-rx";
+	/*#ifdef ODM_LQ_EDIT*/
+	/*shentaotao@ODM_LQ@Multimedia.Audio,2019/10/08,modified for audio bringup*/
+	qcom,wsa-max-devs = <0>;
+	/*
+	#else
 	qcom,wsa-max-devs = <2>;
+	*/
+	/*#endif ODM_LQ_EDIT*/
+
 	qcom,wsa-devs = <&wsa881x_0211>, <&wsa881x_0212>,
 			<&wsa881x_0213>, <&wsa881x_0214>;
 	qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrRight",
 				  "SpkrLeft", "SpkrRight";
 	qcom,codec-max-aux-devs = <1>;
 	qcom,codec-aux-devs = <&wcd938x_codec>;
-	qcom,msm_audio_ssr_devs = <&audio_apr>, <&q6core>,
-				  <&lpi_tlmm>, <&bolero>;
+    qcom,msm_audio_ssr_devs = <&audio_apr>, <&q6core>, <&bolero>,
+				  <&lpi_tlmm>;
+	/*#ifdef ODM_LQ_EDIT*/
+	/*shentaotao@ODM_LQ@Multimedia.Audio,2019/10/08,modified for audio bringup*/
+	qcom,quin-mi2s-gpios = <&cdc_quin_mi2s_gpios>;
+	/*#endif ODM_LQ_EDIT*/
 };
 
 &q6core {
 	cdc_dmic01_gpios: cdc_dmic01_pinctrl {
+		/*#ifdef ODM_LQ_EDIT*/
+		/*shentaotao@ODM_LQ@Multimedia.Audio,2019/10/08,modified for audio bringup*/
+		status = "disabled";
+		/*#endif ODM_LQ_EDIT*/
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&cdc_dmic01_clk_active &cdc_dmic01_data_active>;
@@ -399,6 +419,10 @@
 	};
 
 	cdc_dmic23_gpios: cdc_dmic23_pinctrl {
+		/*#ifdef ODM_LQ_EDIT*/
+		/*shentaotao@ODM_LQ@Multimedia.Audio,2019/10/08,modified for audio bringup*/
+		status = "disabled";
+		/*#endif ODM_LQ_EDIT*/
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&cdc_dmic23_clk_active &cdc_dmic23_data_active>;
@@ -407,6 +431,10 @@
 	};
 
 	cdc_dmic45_gpios: cdc_dmic45_pinctrl {
+		/*#ifdef ODM_LQ_EDIT*/
+		/*shentaotao@ODM_LQ@Multimedia.Audio,2019/10/08,modified for audio bringup*/
+		status = "disabled";
+		/*#endif ODM_LQ_EDIT*/
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&cdc_dmic45_clk_active &cdc_dmic45_data_active>;
@@ -441,11 +469,28 @@
 		qcom,chip-wakeup-reg = <0x01FFB000>;
 		qcom,chip-wakeup-maskbit = <0>;
 		qcom,chip-wakeup-default-val = <0x1>;
-		};
+	};
+
+	/*#ifdef ODM_LQ_EDIT*/
+	/*shentaotao@ODM_LQ@Multimedia.Audio,2019/10/08,modified for audio bringup*/
+	cdc_quin_mi2s_gpios: msm_cdc_pinctrl_quin {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&quin_mi2s_sck_active &quin_mi2s_ws_active
+			    &quin_mi2s_sd0_active &quin_mi2s_sd1_active>;
+		pinctrl-1 = <&quin_mi2s_sck_sleep &quin_mi2s_ws_sleep
+			    &quin_mi2s_sd0_sleep &quin_mi2s_sd1_sleep>;
+		qcom,lpi-gpios;
+	};
+	/*#endif ODM_LQ_EDIT*/
 };
 
 &soc {
 	wsa_spkr_en1: wsa_spkr_en1_pinctrl {
+		/*#ifdef ODM_LQ_EDIT*/
+		/*shentaotao@ODM_LQ@Multimedia.Audio,2019/10/08,modified for audio bringup*/
+		status = "disabled";
+		/*#endif ODM_LQ_EDIT*/
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&spkr_1_sd_n_active>;
@@ -453,6 +498,10 @@
 	};
 
 	wsa_spkr_en2: wsa_spkr_en2_pinctrl {
+		/*#ifdef ODM_LQ_EDIT*/
+		/*shentaotao@ODM_LQ@Multimedia.Audio,2019/10/08,modified for audio bringup*/
+		status = "disabled";
+		/*#endif ODM_LQ_EDIT*/
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&spkr_2_sd_n_active>;

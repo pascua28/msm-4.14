@@ -1133,8 +1133,10 @@ static int qcom_glink_handle_signals(struct qcom_glink *glink,
 	old = channel->rsigs;
 	channel->rsigs = signals;
 
-	if (channel->ept.sig_cb)
+	if (channel->ept.sig_cb) {
+		printk("~1 channel name=%s, channel->ept=%x, channel->ept.rpdev=%x\n",channel->name, channel->ept, channel->ept.rpdev);
 		channel->ept.sig_cb(channel->ept.rpdev, old, channel->rsigs);
+	}
 
 	CH_INFO(channel, "old:%d new:%d\n", old, channel->rsigs);
 

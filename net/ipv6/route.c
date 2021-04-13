@@ -1490,6 +1490,15 @@ static void __ip6_rt_update_pmtu(struct dst_entry *dst, const struct sock *sk,
 		saddr = NULL;
 	}
 	dst_confirm_neigh(dst, daddr);
+
+#ifdef VENDOR_EDIT
+	//Huang.junyuan@PSW.CN.WiFi.Network.internet, 2020/06/08,
+	//ipv6 RFC8201 test
+	if (mtu < IPV6_MIN_MTU) {
+		return;
+	}
+#endif /* VENDOR_EDIT */
+
 	mtu = max_t(u32, mtu, IPV6_MIN_MTU);
 	if (mtu >= dst_mtu(dst))
 		return;

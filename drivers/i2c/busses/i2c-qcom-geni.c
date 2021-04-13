@@ -28,7 +28,13 @@
 #include <linux/ipc_logging.h>
 #include <linux/dmaengine.h>
 #include <linux/msm_gpi.h>
+#ifdef VENDOR_EDIT
+#include <soc/oppo/boot_mode.h>
+#include <linux/pm_qos.h>
+#include "../../power/oppo/oppo_vooc.h"
+#endif
 #include <soc/qcom/boot_stats.h>
+
 
 #define SE_I2C_TX_TRANS_LEN		(0x26C)
 #define SE_I2C_RX_TRANS_LEN		(0x270)
@@ -641,7 +647,103 @@ geni_i2c_gsi_xfer_out:
 				gi2c->i2c_rsc.geni_gpio_sleep);
 	return ret;
 }
+#ifdef VENDOR_EDIT
+/* Jianchao.Shi@PSW.BSP.CHG.Basic, 2018/04/05, sjc Add for charging */
+#define MAX_RESET_COUNT	10
+#define I2C_RESET_BUS		0
+#define FG_DEVICE_ADDR		0x55
+#define DA9313_DEVICE_ADDR	0x68
+//#define CHARGER_DEVICE_ADDR 0x5c
+//#define MCU_DEVICE_ADDR	    0x26
+static bool i2c_err_occured = false;
+static unsigned int err_count = MAX_RESET_COUNT;
+extern int rpmb_is_enable(void);
 
+bool oplus_get_fg_i2c_err_occured(void)
+{
+	return i2c_err_occured;
+}
+EXPORT_SYMBOL(oplus_get_fg_i2c_err_occured);
+
+void oplus_set_fg_i2c_err_occured(bool i2c_err)
+{
+	i2c_err_occured = i2c_err;
+}
+EXPORT_SYMBOL(oplus_set_fg_i2c_err_occured);
+
+static void i2c_oplus_gpio_reset(struct geni_i2c_dev *gi2c)
+{
+	int ret = 0;
+	int i = 0;
+	static bool i2c_reset_processing = false;
+	int boot_mode = get_boot_mode();
+
+	//dev_err(gi2c->dev, "%s: start, return\n", __func__);
+	if (gi2c == NULL)
+		return;
+
+	if ((boot_mode != MSM_BOOT_MODE__NORMAL)
+			&& (boot_mode != MSM_BOOT_MODE__RECOVERY)
+			&& (boot_mode != MSM_BOOT_MODE__SILENCE)
+			&& (boot_mode != MSM_BOOT_MODE__SAU)
+			&& (boot_mode != MSM_BOOT_MODE__CHARGE)) {
+		dev_err(gi2c->dev, "%s: get_boot_mode[%d], return\n", __func__, boot_mode);
+		return;
+	}
+
+	if (i2c_reset_processing == true) {
+		dev_err(gi2c->dev, "%s: i2c_reset is processing, return\n", __func__);
+		return;
+	}
+
+	i2c_reset_processing = true;
+
+	if (!IS_ERR_OR_NULL(gi2c->i2c_rsc.geni_gpio_pulldown)) {
+		dev_err(gi2c->dev, "%s: set geni_gpio_pulldown\n", __func__);
+		ret = pinctrl_select_state(gi2c->i2c_rsc.geni_pinctrl, gi2c->i2c_rsc.geni_gpio_pulldown);
+		if (ret) {
+			dev_err(gi2c->dev, "%s: error pinctrl_select_state pulldown, ret:%d\n", __func__, ret);
+			goto err;
+		}
+	} else {
+		goto err;
+	}
+
+	for (i = 0; i < 220; i++) {
+		usleep_range(10000, 11000);
+		if (oppo_vooc_get_fastchg_started() == true && oppo_vooc_get_fastchg_ing() == false) {
+			dev_err(gi2c->dev, "%s: vooc ready to start, don't pull down i2c, i:%d\n", __func__, i);
+			break;
+		}
+	}
+	oplus_set_fg_i2c_err_occured(true);
+
+	if (!IS_ERR_OR_NULL(gi2c->i2c_rsc.geni_gpio_pullup)) {
+		dev_err(gi2c->dev, "%s: set geni_gpio_pullup\n", __func__);
+		ret = pinctrl_select_state(gi2c->i2c_rsc.geni_pinctrl, gi2c->i2c_rsc.geni_gpio_pullup);
+		if (ret) {
+			dev_err(gi2c->dev, "%s:error pinctrl_select_state pullup, ret:%d\n", __func__, ret);
+		}
+	}
+	if (!IS_ERR_OR_NULL(gi2c->i2c_rsc.geni_gpio_active)) {
+		dev_err(gi2c->dev, "%s: set geni_gpio_active\n", __func__);
+		ret = pinctrl_select_state(gi2c->i2c_rsc.geni_pinctrl, gi2c->i2c_rsc.geni_gpio_active);
+		if (ret) {
+			dev_err(gi2c->dev, "%s:error pinctrl_select_state active, ret:%d\n", __func__, ret);
+			goto err;
+		}
+	} else {
+		goto err;
+	}
+
+	i2c_reset_processing = false;
+	dev_err(gi2c->dev, "%s: gpio reset successful id:%d\n", __func__, gi2c->adap.nr);
+	return;
+
+err:
+	i2c_reset_processing = false;
+}
+#endif /*VENDOR_EDIT*/
 static int geni_i2c_xfer(struct i2c_adapter *adap,
 			 struct i2c_msg msgs[],
 			 int num)
@@ -765,6 +867,24 @@ static int geni_i2c_xfer(struct i2c_adapter *adap,
 					      msgs[i].len);
 		}
 		ret = gi2c->err;
+#ifdef VENDOR_EDIT
+/* Jianchao.Shi@PSW.BSP.CHG.Basic, 2018/04/05, sjc Add for charging */
+		if(msgs[i].addr == FG_DEVICE_ADDR) {
+			if (gi2c->err) {
+				dev_err(gi2c->dev, "gi2c->adap.nr[%d], err_count[%d], msgs[i].addr[0x%x]\n", gi2c->adap.nr, err_count, msgs[i].addr);
+				if (err_count < MAX_RESET_COUNT) {
+					i2c_oplus_gpio_reset(gi2c);
+				} else {
+					dev_err(gi2c->dev, "err_count(%d) >= %d so not reset\n", err_count, MAX_RESET_COUNT);
+				}
+				err_count++;
+			} else  {
+				if(msgs[i].addr == FG_DEVICE_ADDR) {
+					err_count = 0;
+				}
+			}
+		}
+#endif
 		if (gi2c->err) {
 			dev_err(gi2c->dev, "i2c error :%d\n", gi2c->err);
 			break;
@@ -887,6 +1007,26 @@ static int geni_i2c_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+#ifdef VENDOR_EDIT
+/* Jianchao.Shi@PSW.BSP.CHG.Basic, 2018/04/05, sjc Add for charging */
+	gi2c->i2c_rsc.geni_gpio_pulldown =
+		pinctrl_lookup_state(gi2c->i2c_rsc.geni_pinctrl,
+							PINCTRL_PULLDOWN);
+	if (IS_ERR_OR_NULL(gi2c->i2c_rsc.geni_gpio_pulldown)) {
+		/*dev_err(&pdev->dev, "No pulldown config specified\n");
+		ret = PTR_ERR(gi2c->i2c_rsc.geni_gpio_pulldown);
+		return ret;*/
+	}
+	gi2c->i2c_rsc.geni_gpio_pullup =
+		pinctrl_lookup_state(gi2c->i2c_rsc.geni_pinctrl,
+							PINCTRL_PULLUP);
+	if (IS_ERR_OR_NULL(gi2c->i2c_rsc.geni_gpio_pullup)) {
+		/*dev_err(&pdev->dev, "No pulldown config specified\n");
+		ret = PTR_ERR(gi2c->i2c_rsc.geni_gpio_pullup);
+		return ret;*/
+	}
+#endif
+
 	if (of_property_read_u32_array(pdev->dev.of_node, "qcom,clk-cfg",
 		geni_i2c_clk_map_dt, 5)) {
 		if (of_property_read_u32(pdev->dev.of_node, "qcom,clk-freq-out",
@@ -937,6 +1077,12 @@ static int geni_i2c_probe(struct platform_device *pdev)
 				   gi2c->irq, ret);
 		return ret;
 	}
+
+#ifdef VENDOR_EDIT
+/*xing.xiong@BSP.Kernel.Driver, 2019/08/29, Add for print i2c irq number*/
+	dev_info(gi2c->dev, "gi2c irq: %d name: %s\n", gi2c->irq, pdev->dev.of_node->full_name);
+#endif
+
 	disable_irq(gi2c->irq);
 	i2c_set_adapdata(&gi2c->adap, gi2c);
 	gi2c->adap.dev.parent = gi2c->dev;

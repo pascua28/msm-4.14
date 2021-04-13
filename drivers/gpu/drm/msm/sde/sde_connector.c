@@ -24,6 +24,11 @@
 #include "sde_crtc.h"
 #include "sde_rm.h"
 
+#ifdef VENDOR_EDIT
+/* Hujie@PSW.MM.Display.LCD.Stable,2019-07-16 Add for global hightlight mode */
+#include <linux/dsi_oppo_support.h>
+#endif
+
 #define BL_NODE_NAME_SIZE 32
 
 /* Autorefresh will occur after FRAME_CNT frames. Large values are unlikely */
@@ -35,6 +40,14 @@
 #define SDE_ERROR_CONN(c, fmt, ...) SDE_ERROR("conn%d " fmt,\
 		(c) ? (c)->base.base.id : -1, ##__VA_ARGS__)
 
+#ifdef ODM_TARGET_DEVICE_206B1
+/* LiPing-M@PSW.MM.Display.LCD.Feature,2020-06-08
+ * Force enable dither on OnScreenFingerprint scene,add QCOM patch.
+*/
+static u32 dither_matrix[DITHER_MATRIX_SZ] = {
+	15, 7, 13, 5, 3, 11, 1, 9, 12, 4, 14, 6, 0, 8, 2, 10
+};
+#endif
 static const struct drm_prop_enum_list e_topology_name[] = {
 	{SDE_RM_TOPOLOGY_NONE,	"sde_none"},
 	{SDE_RM_TOPOLOGY_SINGLEPIPE,	"sde_singlepipe"},
@@ -64,6 +77,79 @@ static const struct drm_prop_enum_list e_qsync_mode[] = {
 	{SDE_RM_QSYNC_ONE_SHOT_MODE,	"one_shot"},
 };
 
+#ifndef VENDOR_EDIT
+/* Hujie@PSW.MM.Display.LCD.Stable,2019-07-16 Add for global hightlight mode */
+extern u8 readvalue;
+extern int dsi_display_read_panel_reg_for_highlight(struct dsi_display *display,u8 cmd, void *data, size_t len);
+static int readcount = 0;
+#endif
+
+#ifdef VENDOR_EDIT
+static int backlight_remapping_into_tddic_reg(int level_brightness, struct dsi_display *display)
+{
+    int level_temp, value_a, value_b;
+    int level = level_brightness;
+    if ( level > 0) {
+        #ifdef ODM_TARGET_DEVICE_206B1
+        if (display->panel->bl_config.bl_map && level < 2048) {
+        #else
+        if (display->panel->bl_config.bl_map) {
+        #endif
+            if (level%32 > 0)
+                level_temp = level/32 + 1;
+            else
+                level_temp = level/32;
+
+            level_temp = level_temp - 1;
+
+            if((level_temp*2 + 1) > display->panel->bl_config.bl_map_size) {
+                pr_err(" %s INVALID brightness level,return bl_max_level = %d\n", __func__, display->panel->bl_config.bl_max_level);
+                return display->panel->bl_config.bl_max_level;
+            }
+
+            value_a = display->panel->bl_config.bl_map[level_temp*2];
+            value_b = display->panel->bl_config.bl_map[level_temp*2 + 1];
+
+            #ifndef ODM_LQ_EDIT
+            /*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2020/01/04,modified for set min brightness about 2nit*/
+            if (level <= 383)
+                level = value_a*level/100 + value_b;
+            else
+                level = value_a*level/100 - value_b;
+            #else /*ODM_LQ_EDIT*/
+            if(level<=20)
+                level = level*5/7+8;
+            else if(20<level && level<= 383)
+                level = value_a*level/100 + value_b;
+            else
+                level = value_a*level/100 - value_b;
+            #endif/*ODM_LQ_EDIT*/
+
+            #ifdef ODM_TARGET_DEVICE_206B1
+            if (level_brightness <= 4)
+                level = 2;
+            if (level_brightness == 2047)
+                level = 2047;
+            #endif
+            pr_debug(" %s value_a %d value_b %d   level_brightness %d -> level %lld\n", __func__, value_a, value_b, level_brightness, level);
+
+            if (level < 0) {
+                pr_err(" %s backlight value had been converted into a minus type = %d\n", __func__, level);
+                return 0;
+            }
+        }
+
+        if (level < display->panel->bl_config.bl_min_level)
+            level = display->panel->bl_config.bl_min_level;
+        if (level > display->panel->bl_config.bl_max_level)
+            level = display->panel->bl_config.bl_max_level;
+        return level;
+    }
+
+    return 0;
+}
+#endif
+
 static int sde_backlight_device_update_status(struct backlight_device *bd)
 {
 	int brightness;
@@ -85,6 +171,8 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 	if (brightness > display->panel->bl_config.bl_max_level)
 		brightness = display->panel->bl_config.bl_max_level;
 
+    brightness = backlight_remapping_into_tddic_reg(brightness, display);
+
 	/* map UI brightness into driver backlight level with rounding */
 	bl_lvl = mult_frac(brightness, display->panel->bl_config.bl_max_level,
 			display->panel->bl_config.brightness_max_level);
@@ -99,6 +187,14 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 	}
 
 	if (c_conn->ops.set_backlight) {
+		#ifndef VENDOR_EDIT
+		/* Hujie@PSW.MM.Display.LCD.Stable,2019-07-16 Add for global hightlight mode */
+		if ((readcount == 0) && (get_oppo_display_power_status() == OPPO_DISPLAY_POWER_ON)) {
+			dsi_display_read_panel_reg_for_highlight(display,0xB7,&readvalue, 1);
+			pr_err("sde_connect debug hightlight check panel readvalue = 0x%x\n",readvalue);
+			readcount = 1;
+		}
+		#endif
 		event.type = DRM_EVENT_SYS_BACKLIGHT;
 		event.length = sizeof(u32);
 		msm_mode_object_event_notify(&c_conn->base.base,
@@ -144,7 +240,13 @@ static int sde_backlight_setup(struct sde_connector *c_conn,
 	display = (struct dsi_display *) c_conn->display;
 	bl_config = &display->panel->bl_config;
 	props.max_brightness = bl_config->brightness_max_level;
-	props.brightness = bl_config->brightness_default_level;
+#ifndef VENDOR_EDIT
+	/*liping-m@PSW.MM.Display.LCD.Stability,2019/6/19,add for solve backlight issue*/
+	props.brightness = bl_config->brightness_max_level;
+#else
+	props.brightness = 400;
+#endif	/*VENDOR_EDIT*/
+
 	snprintf(bl_node_name, BL_NODE_NAME_SIZE, "panel%u-backlight",
 							display_count);
 	c_conn->bl_device = backlight_device_register(bl_node_name, dev->dev,
@@ -237,12 +339,69 @@ void sde_connector_unregister_event(struct drm_connector *connector,
 	(void)sde_connector_register_event(connector, event_idx, 0, 0);
 }
 
+#ifdef ODM_TARGET_DEVICE_206B1
+/* LiPing-M@PSW.MM.Display.LCD.Feature,2020-06-08
+ * Force enable dither on OnScreenFingerprint scene,add QCOM patch,fix BUG:49203
+*/
+static int _sde_connector_get_default_dither_cfg_v1(
+		struct sde_connector *c_conn, void *cfg)
+{
+	struct drm_msm_dither *dither_cfg = (struct drm_msm_dither *)cfg;
+	enum dsi_pixel_format dst_format = DSI_PIXEL_FORMAT_MAX;
+
+	if (!c_conn || !cfg) {
+		SDE_ERROR("invalid argument(s), c_conn %pK, cfg %pK\n",
+				c_conn, cfg);
+		return -EINVAL;
+	}
+
+	if (!c_conn->ops.get_dst_format) {
+		SDE_DEBUG("get_dst_format is unavailable\n");
+		return 0;
+	}
+
+	dst_format = c_conn->ops.get_dst_format(&c_conn->base, c_conn->display);
+	switch (dst_format) {
+	case DSI_PIXEL_FORMAT_RGB888:
+		dither_cfg->c0_bitdepth = 8;
+		dither_cfg->c1_bitdepth = 8;
+		dither_cfg->c2_bitdepth = 8;
+		dither_cfg->c3_bitdepth = 8;
+		break;
+	case DSI_PIXEL_FORMAT_RGB666:
+	case DSI_PIXEL_FORMAT_RGB666_LOOSE:
+		dither_cfg->c0_bitdepth = 6;
+		dither_cfg->c1_bitdepth = 6;
+		dither_cfg->c2_bitdepth = 6;
+		dither_cfg->c3_bitdepth = 6;
+		break;
+	default:
+		SDE_DEBUG("no default dither config for dst_format %d\n",
+			dst_format);
+		return -ENODATA;
+	}
+
+	memcpy(&dither_cfg->matrix, dither_matrix,
+			sizeof(u32) * DITHER_MATRIX_SZ);
+	dither_cfg->temporal_en = 0;
+	return 0;
+}
+#endif
+
 static void _sde_connector_install_dither_property(struct drm_device *dev,
 		struct sde_kms *sde_kms, struct sde_connector *c_conn)
 {
 	char prop_name[DRM_PROP_NAME_LEN];
 	struct sde_mdss_cfg *catalog = NULL;
+	#ifdef ODM_TARGET_DEVICE_206B1
+	struct drm_property_blob *blob_ptr;
+	void *cfg;
+	int ret = 0;
+	u32 version = 0, len = 0;
+	bool defalut_dither_needed = false;
+	#else
 	u32 version = 0;
+	#endif
 
 	if (!dev || !sde_kms || !c_conn) {
 		SDE_ERROR("invld args (s), dev %pK, sde_kms %pK, c_conn %pK\n",
@@ -260,13 +419,71 @@ static void _sde_connector_install_dither_property(struct drm_device *dev,
 		msm_property_install_blob(&c_conn->property_info, prop_name,
 			DRM_MODE_PROP_BLOB,
 			CONNECTOR_PROP_PP_DITHER);
+#ifdef ODM_TARGET_DEVICE_206B1
+/* LiPing-M@PSW.MM.Display.LCD.Feature,2020-06-08
+ * Force enable dither on OnScreenFingerprint scene,add QCOM patch,fix BUG:49203
+*/
+		len = sizeof(struct drm_msm_dither);
+		cfg = kzalloc(len, GFP_KERNEL);
+		if (!cfg)
+			return;
+
+		ret = _sde_connector_get_default_dither_cfg_v1(c_conn, cfg);
+		if (!ret)
+			defalut_dither_needed = true;
+#endif
 		break;
 	default:
 		SDE_ERROR("unsupported dither version %d\n", version);
 		return;
 	}
+#ifdef ODM_TARGET_DEVICE_206B1
+/* LiPing-M@PSW.MM.Display.LCD.Feature,2020-06-08
+ * Force enable dither on OnScreenFingerprint scene,add QCOM patch,fix BUG:49203
+*/
+	if (defalut_dither_needed) {
+		blob_ptr = drm_property_create_blob(dev, len, cfg);
+		if (IS_ERR_OR_NULL(blob_ptr))
+			goto exit;
+		c_conn->blob_dither = blob_ptr;
+	}
+exit:
+	kfree(cfg);
+#endif
 }
 
+#ifdef ODM_TARGET_DEVICE_206B1
+int sde_connector_get_dither_cfg(struct drm_connector *conn,
+			struct drm_connector_state *state, void **cfg,
+			size_t *len)
+{
+	struct sde_connector *c_conn = NULL;
+	struct sde_connector_state *c_state = NULL;
+	size_t dither_sz = 0;
+	u32 *p = (u32 *)cfg;
+
+	if (!conn || !state || !p)
+
+		return -EINVAL;
+
+
+	c_conn = to_sde_connector(conn);
+	c_state = to_sde_connector_state(state);
+
+	/* try to get user config data first */
+	*cfg = msm_property_get_blob(&c_conn->property_info,
+					&c_state->property_state,
+					&dither_sz,
+					CONNECTOR_PROP_PP_DITHER);
+	/* if user config data doesn't exist, use default dither blob */
+	if (*cfg == NULL && c_conn->blob_dither) {
+		*cfg = c_conn->blob_dither->data;
+		dither_sz = c_conn->blob_dither->length;
+	}
+	*len = dither_sz;
+	return 0;
+}
+#else
 int sde_connector_get_dither_cfg(struct drm_connector *conn,
 			struct drm_connector_state *state, void **cfg,
 			size_t *len, bool idle_pc)
@@ -309,6 +526,7 @@ int sde_connector_get_dither_cfg(struct drm_connector *conn,
 	*len = dither_sz;
 	return 0;
 }
+#endif
 
 int sde_connector_get_mode_info(struct drm_connector_state *conn_state,
 	struct msm_mode_info *mode_info)
@@ -463,7 +681,13 @@ static int _sde_connector_update_bl_scale(struct sde_connector *c_conn)
 {
 	struct dsi_display *dsi_display;
 	struct dsi_backlight_config *bl_config;
+
 	int rc = 0;
+
+#ifdef VENDOR_EDIT
+/*Gou shengjun@PSW.MM.Display.LCD.Stable,2019-03-7 fix backlight race problem */
+	struct backlight_device *bd;
+#endif /* VENDOR_EDIT */
 
 	if (!c_conn) {
 		SDE_ERROR("Invalid params sde_connector null\n");
@@ -478,11 +702,35 @@ static int _sde_connector_update_bl_scale(struct sde_connector *c_conn)
 		return -EINVAL;
 	}
 
+#ifdef VENDOR_EDIT
+/*Gou shengjun@PSW.MM.Display.LCD.Stable,2019-03-7 fix backlight race problem */
+	bd = c_conn->bl_device;
+	if (!bd) {
+		SDE_ERROR("Invalid params backlight_device null\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&bd->update_lock);
+#endif /* VENDOR_EDIT */
+
 	bl_config = &dsi_display->panel->bl_config;
+
+#ifdef VENDOR_EDIT
+		/*liping-m@PSW.MM.Display.LCD.Stable,2019/6/25 fix bug2087450 hbm backlight problem */
+		if(bl_config->bl_level > 2047){
+			c_conn->unset_bl_level = bl_config->bl_level;
+			mutex_unlock(&bd->update_lock);
+			return 0;
+		}
+#endif /* VENDOR_EDIT */
 
 	if (dsi_display->panel->bl_config.bl_update ==
 		BL_UPDATE_DELAY_UNTIL_FIRST_FRAME && !c_conn->allow_bl_update) {
 		c_conn->unset_bl_level = bl_config->bl_level;
+#ifdef VENDOR_EDIT
+/*Gou shengjun@PSW.MM.Display.LCD.Stable,2019-03-7 fix backlight race problem */
+		mutex_unlock(&bd->update_lock);
+#endif /* VENDOR_EDIT */
 		return 0;
 	}
 
@@ -505,6 +753,11 @@ static int _sde_connector_update_bl_scale(struct sde_connector *c_conn)
 	rc = c_conn->ops.set_backlight(&c_conn->base,
 			dsi_display, bl_config->bl_level);
 	c_conn->unset_bl_level = 0;
+
+#ifdef VENDOR_EDIT
+/*Gou shengjun@PSW.MM.Display.LCD.Stable,2019-03-7 fix backlight race problem */
+	mutex_unlock(&bd->update_lock);
+#endif /* VENDOR_EDIT */
 
 	return rc;
 }
@@ -537,6 +790,365 @@ void sde_connector_set_qsync_params(struct drm_connector *connector)
 		}
 	}
 }
+
+#ifdef VENDOR_EDIT
+/* Gou shengjun@PSW.MM.Display.Service.Feature,2018/11/21
+ * For OnScreenFingerprint feature
+*/
+extern bool sde_crtc_get_fingerprint_mode(struct drm_crtc_state *crtc_state);
+extern bool sde_crtc_get_fingerprint_pressed(struct drm_crtc_state *crtc_state);
+extern int oppo_display_get_hbm_mode(void);
+extern int sde_crtc_set_onscreenfinger_defer_sync(struct drm_crtc_state *crtc_state, bool defer_sync);
+extern int oppo_dimlayer_bl;
+extern int oppo_dimlayer_bl_enable_real;
+extern int oppo_dimlayer_bl_enable;
+extern int oppo_dimlayer_bl_enabled;
+extern int oppo_dimlayer_bl_delay;
+extern int oppo_dimlayer_bl_delay_after;
+
+int sde_connector_update_backlight(struct drm_connector *connector)
+{
+	if (oppo_dimlayer_bl != oppo_dimlayer_bl_enabled) {
+		struct sde_connector *c_conn = to_sde_connector(connector);
+
+		oppo_dimlayer_bl_enabled = oppo_dimlayer_bl;
+		usleep_range(oppo_dimlayer_bl_delay, oppo_dimlayer_bl_delay + 100);
+		_sde_connector_update_bl_scale(c_conn);
+		usleep_range(oppo_dimlayer_bl_delay_after, oppo_dimlayer_bl_delay_after + 100);
+	}
+
+	return 0;
+}
+
+extern int oppo_dimlayer_hbm_vblank_count;
+extern atomic_t oppo_dimlayer_hbm_vblank_ref;
+#ifdef ODM_TARGET_DEVICE_206B1
+extern int oppo_display_mode;
+extern int oppo_panel_update_backlight_unlock(struct dsi_panel *panel);
+extern int oppo_update_aod_light_mode_unlock(struct dsi_panel *panel);
+extern ktime_t oppo_backlight_time;
+extern int set_fingerprint_hbm_off(struct dsi_panel *panel, enum dsi_cmd_set_type type);
+extern int dsi_set_seed_mode(struct dsi_panel *panel, int mode, u32 bl_lvl);
+extern int oppo_dimlayer_bl_alpha;
+int sde_connector_update_hbm(struct drm_connector *connector)
+{
+	struct sde_connector *c_conn = to_sde_connector(connector);
+	struct dsi_display *dsi_display;
+	struct sde_connector_state *c_state;
+	int rc = 0;
+	int fingerprint_mode;
+
+	if (!c_conn) {
+		SDE_ERROR("Invalid params sde_connector null\n");
+		return -EINVAL;
+	}
+
+	if (c_conn->connector_type != DRM_MODE_CONNECTOR_DSI)
+		return 0;
+
+	c_state = to_sde_connector_state(connector->state);
+
+	dsi_display = c_conn->display;
+	if (!dsi_display || !dsi_display->panel) {
+		SDE_ERROR("Invalid params(s) dsi_display %pK, panel %pK\n",
+			dsi_display,
+			((dsi_display) ? dsi_display->panel : NULL));
+		return -EINVAL;
+	}
+
+	if (!c_conn->encoder || !c_conn->encoder->crtc ||
+	    !c_conn->encoder->crtc->state) {
+		return 0;
+	}
+
+	//fingerprint_mode = sde_crtc_get_fingerprint_mode(c_conn->encoder->crtc->state);
+	if (OPPO_DISPLAY_AOD_SCENE == get_oppo_display_scene()) {
+		if (sde_crtc_get_fingerprint_pressed(c_conn->encoder->crtc->state)) {
+			sde_crtc_set_onscreenfinger_defer_sync(c_conn->encoder->crtc->state, true);
+		} else {
+			sde_crtc_set_onscreenfinger_defer_sync(c_conn->encoder->crtc->state, false);
+			//fingerprint_mode = false;
+		}
+	} else {
+		sde_crtc_set_onscreenfinger_defer_sync(c_conn->encoder->crtc->state, false);
+	}
+	fingerprint_mode = sde_crtc_get_fingerprint_mode(c_conn->encoder->crtc->state);
+	if (fingerprint_mode != dsi_display->panel->is_hbm_enabled) {
+		struct dsi_panel *panel = dsi_display->panel;
+
+		pr_err("OnscreenFingerprint mode: %s",
+		       fingerprint_mode ? "Enter" : "Exit");
+
+		/*zengjianxiong@ODM.LQ.MM.Display add for making fingerprint dimlayer and DC dimlayer mutually exclusive*/
+		if(oppo_dimlayer_bl_enable){
+			oppo_dimlayer_bl_enable_real=!fingerprint_mode;
+			/*when backlight bigger than 1100,should disable DC*/
+			if(panel->bl_config.bl_level>oppo_dimlayer_bl_alpha)
+				oppo_dimlayer_bl_enable_real=0;
+			//pr_err("Fingerprint mode:%d  DC mode:%d \n",fingerprint_mode,oppo_dimlayer_bl_enable_real);
+                }
+
+		dsi_display->panel->is_hbm_enabled = fingerprint_mode;
+		if (fingerprint_mode) {
+			if (oppo_display_mode) {
+				mutex_lock(&dsi_display->panel->panel_lock);
+				if (!dsi_display->panel->panel_initialized) {
+					dsi_display->panel->is_hbm_enabled = false;
+					pr_err("panel not initialized, failed to Enter OnscreenFingerprint\n");
+					mutex_unlock(&dsi_display->panel->panel_lock);
+					return 0;
+				}
+				dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+							     DSI_CORE_CLK, DSI_CLK_ON);
+
+				if (dsi_display->panel->oppo_priv.is_aod_ramless) {
+					ktime_t delta = ktime_sub(ktime_get(), oppo_backlight_time);
+					s64 delta_us = ktime_to_us(delta);
+					if (delta_us < 34000 && delta_us >= 0)
+						usleep_range(34000 - delta_us, 34000 - delta_us + 100);
+				}
+
+				if (OPPO_DISPLAY_AOD_SCENE != get_oppo_display_scene() &&
+				    dsi_display->panel->bl_config.bl_level) {
+					/*zengjianxiong@ODM.LQ.MM.Display add for making fingerprint dimlayer and DC dimlayer mutually exclusive*/
+					if(oppo_dimlayer_bl_enable&&(!oppo_dimlayer_bl_enable_real)){
+						rc = dsi_set_seed_mode(panel, 0, panel->bl_config.bl_level);
+						/*sleep 17ms to avoid high brightness flashing*/
+						usleep_range(17000, 17000 + 100);
+						}
+
+					rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_AOD_HBM_ON);
+				} else {
+					rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_AOD_HBM_ON);
+				}
+
+				dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+							     DSI_CORE_CLK, DSI_CLK_OFF);
+				mutex_unlock(&dsi_display->panel->panel_lock);
+				if (rc) {
+					pr_err("failed to send DSI_CMD_HBM_ON cmds, rc=%d\n", rc);
+					return rc;
+				}
+			}
+		} else {
+			#ifndef ODM_TARGET_DEVICE_206B1
+			/*zhangyang@ODM_LQ@Multimedia.Dispaly,2020/06/16,modify samsung panel backlight issue*/
+			_sde_connector_update_bl_scale(c_conn);
+			#endif
+			mutex_lock(&dsi_display->panel->panel_lock);
+			if (!dsi_display->panel->panel_initialized) {
+				dsi_display->panel->is_hbm_enabled = true;
+				pr_err("panel not initialized, failed to Exit OnscreenFingerprint\n");
+				mutex_unlock(&dsi_display->panel->panel_lock);
+				return 0;
+			}
+			//oppo_panel_update_backlight_unlock(panel);
+
+			dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+					     DSI_CORE_CLK, DSI_CLK_ON);
+			if(OPPO_DISPLAY_AOD_HBM_SCENE == get_oppo_display_scene()) {
+				if (OPPO_DISPLAY_POWER_DOZE_SUSPEND == get_oppo_display_power_status() ||
+				    OPPO_DISPLAY_POWER_DOZE == get_oppo_display_power_status()) {
+					rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_AOD_HBM_OFF);
+					oppo_update_aod_light_mode_unlock(panel);
+					set_oppo_display_scene(OPPO_DISPLAY_AOD_SCENE);
+				} else {
+					//rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_SET_NOLP);
+					set_fingerprint_hbm_off(panel, DSI_CMD_FINGERPRINT_HBM_OFF);
+					/* set nolp would exit hbm, restore when panel status on hbm */
+					if(panel->bl_config.bl_level > 2047)
+						oppo_panel_update_backlight_unlock(panel);
+					if (oppo_display_get_hbm_mode()) {
+							rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_AOD_HBM_ON);
+					}
+					set_oppo_display_scene(OPPO_DISPLAY_NORMAL_SCENE);
+				}
+			} else if (oppo_display_get_hbm_mode()) {
+				/* Do nothing to skip hbm off */
+			} else if(OPPO_DISPLAY_AOD_SCENE == get_oppo_display_scene()) {
+				rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_AOD_HBM_OFF);
+				oppo_update_aod_light_mode_unlock(panel);
+			} else {
+				//rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_HBM_OFF);
+				set_fingerprint_hbm_off(panel, DSI_CMD_FINGERPRINT_HBM_OFF);
+			}
+			dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+					     DSI_CORE_CLK, DSI_CLK_OFF);
+			mutex_unlock(&dsi_display->panel->panel_lock);
+			if (rc) {
+				pr_err("failed to send DSI_CMD_HBM_OFF cmds, rc=%d\n", rc);
+				return rc;
+			}
+		}
+	}
+
+	return 0;
+}
+#else
+int sde_connector_update_hbm(struct drm_connector *connector)
+{
+	struct sde_connector *c_conn = to_sde_connector(connector);
+	struct dsi_display *dsi_display;
+	struct sde_connector_state *c_state;
+	int rc = 0;
+	int fingerprint_mode;
+
+	if (!c_conn) {
+		SDE_ERROR("Invalid params sde_connector null\n");
+		return -EINVAL;
+	}
+
+	if (c_conn->connector_type != DRM_MODE_CONNECTOR_DSI)
+		return 0;
+
+	c_state = to_sde_connector_state(connector->state);
+
+	dsi_display = c_conn->display;
+	if (!dsi_display || !dsi_display->panel) {
+		SDE_ERROR("Invalid params(s) dsi_display %pK, panel %pK\n",
+			dsi_display,
+			((dsi_display) ? dsi_display->panel : NULL));
+		return -EINVAL;
+	}
+
+	if (!c_conn->encoder || !c_conn->encoder->crtc ||
+	    !c_conn->encoder->crtc->state) {
+		return 0;
+	}
+
+	fingerprint_mode = sde_crtc_get_fingerprint_mode(c_conn->encoder->crtc->state);
+	if (OPPO_DISPLAY_AOD_SCENE == get_oppo_display_scene()) {
+		if (sde_crtc_get_fingerprint_pressed(c_conn->encoder->crtc->state)) {
+			sde_crtc_set_onscreenfinger_defer_sync(c_conn->encoder->crtc->state, true);
+		} else {
+			sde_crtc_set_onscreenfinger_defer_sync(c_conn->encoder->crtc->state, false);
+			fingerprint_mode = false;
+		}
+	} else {
+		sde_crtc_set_onscreenfinger_defer_sync(c_conn->encoder->crtc->state, false);
+	}
+
+	if (fingerprint_mode != dsi_display->panel->is_hbm_enabled) {
+		struct drm_crtc *crtc = c_conn->encoder->crtc;
+		u32 target_vblank, current_vblank;
+		int ret;
+
+		pr_err("OnscreenFingerprint mode: %s",
+		       fingerprint_mode ? "Enter" : "Exit");
+
+		dsi_display->panel->is_hbm_enabled = fingerprint_mode;
+		if (fingerprint_mode) {
+			mutex_lock(&dsi_display->panel->panel_lock);
+
+			if (OPPO_DISPLAY_AOD_SCENE != get_oppo_display_scene() &&
+			    dsi_display->panel->bl_config.bl_level) {
+				current_vblank = drm_crtc_vblank_count(crtc);
+				ret = wait_event_timeout(*drm_crtc_vblank_waitqueue(crtc),
+						current_vblank != drm_crtc_vblank_count(crtc),
+						msecs_to_jiffies(17));
+
+				target_vblank = drm_crtc_vblank_count(crtc) + 2;
+
+				dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+						     DSI_CORE_CLK, DSI_CLK_ON);	
+
+                                rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_AOD_HBM_ON);
+
+				dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+						     DSI_CORE_CLK, DSI_CLK_OFF);
+
+				ret = wait_event_timeout(*drm_crtc_vblank_waitqueue(crtc),
+					target_vblank == drm_crtc_vblank_count(crtc),
+					msecs_to_jiffies(50));
+				if (!ret) {
+					pr_err("yzq: %s %d failed to wait timeout\n", __func__, __LINE__);
+				}
+				pr_err("yzq: %s %d target_vblank=%d current_vblank=%d\n", __func__, __LINE__, target_vblank, drm_crtc_vblank_count(crtc));
+			} else {
+				dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+						     DSI_CORE_CLK, DSI_CLK_ON);
+
+				rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_AOD_HBM_ON);
+				
+				dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+						     DSI_CORE_CLK, DSI_CLK_OFF);
+			}
+
+			mutex_unlock(&dsi_display->panel->panel_lock);
+			if (rc) {
+				pr_err("failed to send DSI_CMD_HBM_ON cmds, rc=%d\n", rc);
+				return rc;
+			}
+		} else {
+			#ifndef ODM_TARGET_DEVICE_206B1
+			/*zhangyang@ODM_LQ@Multimedia.Dispaly,2020/06/16,modify samsung panel backlight issue*/
+			_sde_connector_update_bl_scale(c_conn);
+			#endif
+
+			mutex_lock(&dsi_display->panel->panel_lock);
+
+			current_vblank = drm_crtc_vblank_count(crtc);
+			ret = wait_event_timeout(*drm_crtc_vblank_waitqueue(crtc),
+					current_vblank != drm_crtc_vblank_count(crtc),
+					msecs_to_jiffies(17));
+
+			dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+					     DSI_CORE_CLK, DSI_CLK_ON);
+			if(OPPO_DISPLAY_AOD_HBM_SCENE == get_oppo_display_scene()) {
+				if (OPPO_DISPLAY_POWER_DOZE_SUSPEND == get_oppo_display_power_status() ||
+				    OPPO_DISPLAY_POWER_DOZE == get_oppo_display_power_status()) {
+					rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_AOD_HBM_OFF);
+					set_oppo_display_scene(OPPO_DISPLAY_AOD_SCENE);
+				} else {
+					dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+						DSI_CORE_CLK, DSI_CLK_ON);
+					rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_SET_NOLP);
+					dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+						DSI_CORE_CLK, DSI_CLK_OFF);
+					/* set nolp would exit hbm, restore when panel status on hbm */
+					if (oppo_display_get_hbm_mode()) {
+							dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+								DSI_CORE_CLK, DSI_CLK_ON);
+							rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_AOD_HBM_ON);
+							dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+								DSI_CORE_CLK, DSI_CLK_OFF);
+					}
+					set_oppo_display_scene(OPPO_DISPLAY_NORMAL_SCENE);
+				}
+			} else if (oppo_display_get_hbm_mode()) {
+				/* Do nothing to skip hbm off */
+			} else if(OPPO_DISPLAY_AOD_SCENE == get_oppo_display_scene()) {
+				rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_AOD_HBM_OFF);
+			} else {
+				rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_HBM_OFF);
+			}
+			dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
+					     DSI_CORE_CLK, DSI_CLK_OFF);
+			mutex_unlock(&dsi_display->panel->panel_lock);
+			if (rc) {
+				pr_err("failed to send DSI_CMD_HBM_OFF cmds, rc=%d\n", rc);
+				return rc;
+			}
+			#ifdef ODM_TARGET_DEVICE_206B1
+			/*zhangyang@ODM_LQ@Multimedia.Dispaly,2020/06/16,modify samsung panel backlight issue*/
+			_sde_connector_update_bl_scale(c_conn);
+			#endif
+		}
+	}
+
+	if (oppo_dimlayer_hbm_vblank_count > 0) {
+		oppo_dimlayer_hbm_vblank_count--;
+	} else {
+		while (atomic_read(&oppo_dimlayer_hbm_vblank_ref) > 0) {
+			drm_crtc_vblank_put(connector->state->crtc);
+			atomic_dec(&oppo_dimlayer_hbm_vblank_ref);
+		}
+	}
+
+	return 0;
+}
+#endif
+#endif
 
 static int _sde_connector_update_dirty_properties(
 				struct drm_connector *connector)
@@ -688,6 +1300,7 @@ void sde_connector_helper_bridge_disable(struct drm_connector *connector)
 	}
 
 	c_conn->allow_bl_update = false;
+
 }
 
 void sde_connector_helper_bridge_enable(struct drm_connector *connector)
@@ -2329,7 +2942,13 @@ struct drm_connector *sde_connector_init(struct drm_device *dev,
 	msm_property_install_range(&c_conn->property_info, "ad_bl_scale",
 		0x0, 0, MAX_AD_BL_SCALE_LEVEL, MAX_AD_BL_SCALE_LEVEL,
 		CONNECTOR_PROP_AD_BL_SCALE);
-
+#ifdef VENDOR_EDIT
+/* Gou shengjun@PSW.MM.Display.LCD.Feature,2018-11-21
+ * Support custom propertys
+*/
+	msm_property_install_range(&c_conn->property_info,"CONNECTOR_CUST",
+		0x0, 0, INT_MAX, 0, CONNECTOR_PROP_CUSTOM);
+#endif
 	c_conn->bl_scale_dirty = false;
 	c_conn->bl_scale = MAX_BL_SCALE_LEVEL;
 	c_conn->bl_scale_ad = MAX_AD_BL_SCALE_LEVEL;

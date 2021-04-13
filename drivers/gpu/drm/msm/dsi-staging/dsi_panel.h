@@ -29,6 +29,12 @@
 #include "dsi_pwr.h"
 #include "dsi_parser.h"
 #include "msm_drv.h"
+#ifdef VENDOR_EDIT
+/* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/11/21
+ * Add for save display panel power status at oppo display management
+*/
+#include <linux/dsi_oppo_support.h>
+#endif /*VENDOR_EDIT*/
 
 #define MAX_BL_LEVEL 4096
 #define MAX_BL_SCALE_LEVEL 1024
@@ -118,6 +124,11 @@ struct dsi_backlight_config {
 	u32 bl_level;
 	u32 bl_scale;
 	u32 bl_scale_ad;
+#ifdef VENDOR_EDIT
+    /*Jinzhu.Han@RM.MM.Display.LCD 2019.11.30 Add for exponential backlight curve*/
+	u32 bl_map_size;
+	u32 *bl_map;
+#endif
 
 	int en_gpio;
 	/* PWM params */
@@ -166,6 +177,17 @@ struct drm_panel_esd_config {
 	u8 *status_buf;
 	u32 groups;
 };
+
+#ifdef ODM_TARGET_DEVICE_206B1
+/*Mark.Yao@PSW.MM.Display.LCD.Feature,2019-11-07 add for oppo custom info */
+struct dsi_panel_oppo_privite {
+
+	bool skip_mipi_last_cmd;
+	bool is_aod_ramless;
+
+};
+#endif
+
 
 struct dsi_panel {
 	const char *name;
@@ -217,6 +239,17 @@ struct dsi_panel {
 	bool sync_broadcast_en;
 	int power_mode;
 	enum dsi_panel_physical_type panel_type;
+#ifdef VENDOR_EDIT
+/* Gou shengjun@PSW.MM.Display.Service.Feature,2018/11/21
+ * For OnScreenFingerprint feature
+*/
+	bool is_hbm_enabled;
+	/* Fix aod flash problem */
+	bool need_power_on_backlight;
+#ifdef ODM_TARGET_DEVICE_206B1
+	struct dsi_panel_oppo_privite oppo_priv;
+#endif
+#endif
 };
 
 static inline bool dsi_panel_ulps_feature_enabled(struct dsi_panel *panel)
@@ -336,5 +369,23 @@ struct dsi_panel *dsi_panel_ext_bridge_get(struct device *parent,
 int dsi_panel_parse_esd_reg_read_configs(struct dsi_panel *panel);
 
 void dsi_panel_ext_bridge_put(struct dsi_panel *panel);
+#ifdef VENDOR_EDIT
+/* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/11/21
+ * Add for oppo display new structure
+*/
+int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
+			   enum dsi_cmd_set_type type);
+#endif
+
+#ifdef ODM_LQ_EDIT
+/*xuchengxin@ODM_LQ@Multimedia.Dispaly,2019/10/15,add information of cabc to sys/fs*/
+int dsi_panel_send_cmd_type(struct dsi_panel *panel, enum dsi_cmd_set_type type);
+/* add begin by zhangchaofan@ODM_LQ@Multimedia.TP,for tp resume upload fw 2019-12-05*/
+void __attribute__((weak)) lcd_queue_load_tp_fw(void);
+/* add end by zhangchaofan@ODM_LQ@Multimedia.TP,for tp resume upload fw 2019-12-05 */
+/* add begin by zhangchaofan@ODM_LQ@Multimedia.TP, for tp gesture 2019-12-05*/
+int __attribute__((weak)) tp_gesture_enable_flag(void);
+/* add end by zhangchaofan@ODM_LQ@Multimedia.TP, for tp gesture 2019-12-05 */
+#endif /*ODM_LQ_EDIT*/
 
 #endif /* _DSI_PANEL_H_ */

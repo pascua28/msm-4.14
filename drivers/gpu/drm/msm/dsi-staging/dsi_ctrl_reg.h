@@ -156,6 +156,13 @@
 #define DSI_CPHY_MODE_CTRL                         (0x02D8)
 #define DSI_LOGICAL_LANE_SWAP_CTRL                 (0x0310)
 #define DSI_SPLIT_LINK                             (0x0330)
+#ifdef ODM_LQ_EDIT
+/*zhangjialong@ODM_LQ@Multimedia.Dispaly,2020/01/10,add for  qti patch for data scrambling*/
+#ifndef ODM_TARGET_DEVICE_206B1
+/*zhangyang@ODM_LQ@Multimedia.Dispaly,2020/05/30,add for bringup samsung s6e8fc1x01 panel*/
+#define DSI_SCRAMBLE_CTRL                          (0x0328)
+#endif
+#endif
 
 
 #endif /* _DSI_CTRL_REG_H_ */

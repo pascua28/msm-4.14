@@ -15,6 +15,17 @@
 
 #include <linux/bitops.h>
 
+#ifdef VENDOR_EDIT
+#ifdef CONFIG_OPPO_SM6250_CHARGER
+#ifndef ODM_TARGET_DEVICE_206B1
+/* Yichun.Chen  PSW.BSP.CHG  2019-07-10  for charge */
+#include "../../oppo/charger_ic/oppo_battery_sm6250_P.h"
+#else
+#include "../../oppo/charger_ic/oppo_battery_sm7125_Q.h"
+#endif
+#endif
+#endif
+
 #define SCHGM_FLASH_BASE			0xA600
 
 #define SCHGM_FLASH_STATUS_2_REG		(SCHGM_FLASH_BASE + 0x07)

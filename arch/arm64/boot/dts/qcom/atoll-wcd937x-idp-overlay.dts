@@ -17,13 +17,29 @@
 #include "atoll-idp.dtsi"
 #include "atoll-wcd937x-idp-audio-overlay.dtsi"
 
+/*#ifdef ODM_LQ_EDIT*/
+/*qujiong@ODM_LQ@BSP.touch,2019/10/10,modified for bring up TP*/
+#include "hx83112a-spi-touchscreen.dtsi"
+/*zhangchaofan@ODM_LQ@BSP.touch,2019/10/29,add nova dtsifor bring up TP*/
+#include "novatek-nt36672c-spi-tp.dtsi"
+/*endif ODM_LQ_EDIT*/
+
 / {
 	model = "wcd937x Audio Codec IDP";
 	compatible = "qcom,atoll-idp", "qcom,atoll", "qcom,idp";
 	qcom,msm-id = <407 0x0>;
 	qcom,board-id = <34 1>;
+	//oppo,project = <19721 19759>;
 };
 
-&dsi_rm69299_visionox_amoled_vid_display {
+/*#ifndef ODM_LQ_EDIT*/
+/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/10,modified for plato used wcd937x*/
+/*&dsi_rm69299_visionox_amoled_vid_display {
 	qcom,dsi-display-active;
+};*/
+/*else ODM_LQ_EDIT*/
+/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/25,modified for for bringup C-PHY panel*/
+&dsi_nt36672c_boe_video_display {
+    qcom,dsi-display-active;
 };
+/*#endif ODM_LQ_EDIT*/

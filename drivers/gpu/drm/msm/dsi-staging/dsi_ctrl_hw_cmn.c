@@ -514,6 +514,13 @@ void dsi_ctrl_hw_cmn_video_engine_setup(struct dsi_ctrl_hw *ctrl,
 	/* Disable Timing double buffering */
 	DSI_W32(ctrl, DSI_DSI_TIMING_DB_MODE, 0x0);
 
+	#ifdef ODM_LQ_EDIT
+	/*zhangjialong@ODM_LQ@Multimedia.Dispaly,2020/01/10,add for qti patch for data scrambling*/
+	#ifndef ODM_TARGET_DEVICE_206B1
+	/*zhangyang@ODM_LQ@Multimedia.Dispaly,2020/05/30,add for bringup samsung s6e8fc1x01 panel*/
+        DSI_W32(ctrl, DSI_SCRAMBLE_CTRL, 0x1);
+	#endif
+	#endif
 	pr_debug("[DSI_%d] Video engine setup done\n", ctrl->index);
 }
 

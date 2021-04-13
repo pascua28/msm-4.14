@@ -149,6 +149,7 @@ static LIST_HEAD(g_mem_objs);
 static uint16_t g_last_cb_server_id = CBOBJ_SERVER_ID_START;
 static uint16_t g_last_mem_rgn_id, g_last_mem_map_obj_id;
 static size_t g_max_cb_buf_size = SMCINVOKE_TZ_MIN_BUF_SIZE;
+static unsigned int cb_reqs_inflight;
 
 static long smcinvoke_ioctl(struct file *, unsigned int, unsigned long);
 static int smcinvoke_open(struct inode *, struct file *);
@@ -899,6 +900,8 @@ static void process_kernel_obj(void *buf, size_t buf_len)
 		cb_req->result = OBJECT_ERROR_INVALID;
 		break;
 	}
+
+	pr_err(" smcdebug: kernel object %p processed with result %d ", cb_req, cb_req->result);
 }
 
 static void process_mem_obj(void *buf, size_t buf_len)
@@ -910,6 +913,8 @@ static void process_mem_obj(void *buf, size_t buf_len)
 			smcinvoke_release_mem_obj_locked(buf, buf_len) :
 			OBJECT_ERROR_INVALID;
 	mutex_unlock(&g_smcinvoke_lock);
+
+	pr_err(" smcdebug: mem object %p processed with result %d ", cb_req, cb_req->result);
 }
 
 /*
@@ -973,6 +978,7 @@ static void process_tzcb_req(void *buf, size_t buf_len, struct file **arr_filp)
 	kref_init(&cb_txn->ref_cnt);
 
 	mutex_lock(&g_smcinvoke_lock);
+	++cb_reqs_inflight;
 	srvr_info = get_cb_server_locked(
 				TZHANDLE_GET_SERVER(cb_req->hdr.tzhandle));
 	if (!srvr_info || srvr_info->state == SMCINVOKE_SERVER_STATE_DEFUNCT) {
@@ -983,16 +989,25 @@ static void process_tzcb_req(void *buf, size_t buf_len, struct file **arr_filp)
 	}
 
 	cb_txn->txn_id = ++srvr_info->txn_id;
+	pr_err(" smcdebug: Request placed for  cb_txn %p txn_id %u\n",cb_txn, cb_txn->txn_id);
 	hash_add(srvr_info->reqs_table, &cb_txn->hash, cb_txn->txn_id);
 	mutex_unlock(&g_smcinvoke_lock);
 	/*
 	 * we need not worry that server_info will be deleted because as long
 	 * as this CBObj is served by this server, srvr_info will be valid.
 	 */
+/*
 	wake_up_interruptible(&srvr_info->req_wait_q);
 	ret = wait_event_interruptible(srvr_info->rsp_wait_q,
+*/
+	if (wq_has_sleeper(&srvr_info->req_wait_q)) {
+		wake_up_interruptible_all(&srvr_info->req_wait_q);
+ 		ret = wait_event_interruptible(srvr_info->rsp_wait_q,
 			(cb_txn->state == SMCINVOKE_REQ_PROCESSED) ||
 			(srvr_info->state == SMCINVOKE_SERVER_STATE_DEFUNCT));
+	}
+	pr_err(" smcdebug: Request completed for  cb_txn %p txn_id %u with state %d \n",
+			cb_txn, cb_txn->txn_id, cb_txn->state);
 out:
 	/*
 	 * we could be here because of either: a. Req is PROCESSED
@@ -1011,9 +1026,10 @@ out:
 		cb_req->result = OBJECT_ERROR_DEFUNCT;
 		pr_err("server invalid, res: %d\n", cb_req->result);
 	} else {
-		pr_debug("%s wait_event interrupted ret = %d\n", __func__, ret);
+		pr_err(" smcdebug: %s wait_event interrupted ret = %d\n", __func__, ret);
 		cb_req->result = OBJECT_ERROR_ABORT;
 	}
+	--cb_reqs_inflight;
 	memcpy(buf, cb_req, buf_len);
 	kref_put(&cb_txn->ref_cnt, delete_cb_txn);
 	if (srvr_info)
@@ -1046,13 +1062,13 @@ static int marshal_out_invoke_req(const uint8_t *buf, uint32_t buf_size,
 		args_buf[i].b.size = tz_args->b.size;
 		if ((buf_size - tz_args->b.offset < tz_args->b.size) ||
 			tz_args->b.offset > buf_size) {
-			pr_err("%s: buffer overflow detected\n", __func__);
+			pr_err(" smcdebug: %s: buffer overflow detected\n", __func__);
 			goto out;
 		}
 		if (copy_to_user((void __user *)(uintptr_t)(args_buf[i].b.addr),
 			(uint8_t *)(buf) + tz_args->b.offset,
 						tz_args->b.size)) {
-			pr_err("Error %d copying ctxt to user\n", ret);
+			pr_err(" smcdebug: Error %d copying ctxt to user\n", ret);
 			goto out;
 		}
 		tz_args++;
@@ -1119,6 +1135,7 @@ static int prepare_send_scm_msg(const uint8_t *in_buf, size_t in_buf_len,
 	 */
 	while (1) {
 		mutex_lock(&g_smcinvoke_lock);
+//		pr_err(" smcdebug: scm call sent for request at :%p ",in_paddr);
 		ret = scm_call2(cmd, &desc);
 		req->result = (int32_t)desc.ret[1];
 		if (!ret && !is_inbound_req(desc.ret[0])) {
@@ -1132,6 +1149,8 @@ static int prepare_send_scm_msg(const uint8_t *in_buf, size_t in_buf_len,
 			}
 			*tz_acked = true;
 		}
+//		pr_err(" smcdebug: scm call completed for request at :%p with ret:%d  result: %d type of request : %d", in_paddr, ret, req->result, (int32_t)desc.ret[0]);
+
 		mutex_unlock(&g_smcinvoke_lock);
 
 		if (cmd == SMCINVOKE_CB_RSP_CMD)
@@ -1176,6 +1195,7 @@ static int prepare_send_scm_msg(const uint8_t *in_buf, size_t in_buf_len,
 		dmac_inv_range(out_buf, out_buf + out_buf_len);
 
 		if (desc.ret[0] == SMCINVOKE_RESULT_INBOUND_REQ_NEEDED) {
+			pr_err(" smcdebug: Inbound request needed ");
 			process_tzcb_req(out_buf, out_buf_len, arr_filp);
 			desc.arginfo = SMCINVOKE_CB_RSP_PARAM_ID;
 			desc.args[0] = (uint64_t)virt_to_phys(out_buf);
@@ -1314,7 +1334,7 @@ static int marshal_in_tzcb_req(const struct smcinvoke_cb_txn *cb_txn,
 			(tmp_arg.b.size >
 			user_req->buf_len - user_req_buf_offset)) {
 			ret = -EINVAL;
-			pr_err("%s: buffer overflow detected\n", __func__);
+			pr_err(" smcdebug:  %s: buffer overflow detected\n", __func__);
 			goto out;
 		}
 		tmp_arg.b.addr = user_req->buf_addr + user_req_buf_offset;
@@ -1339,7 +1359,7 @@ static int marshal_in_tzcb_req(const struct smcinvoke_cb_txn *cb_txn,
 		    (tmp_arg.b.size >
 				user_req->buf_len - user_req_buf_offset)) {
 			ret = -EINVAL;
-			pr_err("%s: buffer overflow detected\n", __func__);
+			pr_err(" smcdebug:  %s: buffer overflow detected\n", __func__);
 			goto out;
 		}
 		tmp_arg.b.addr = user_req->buf_addr + user_req_buf_offset;
@@ -1528,7 +1548,7 @@ static long process_accept_req(struct file *filp, unsigned int cmd,
 						unsigned long arg)
 {
 	int ret = -1;
-	sigset_t pending_sig;
+	//sigset_t pending_sig;
 	struct smcinvoke_file_data *server_obj = filp->private_data;
 	struct smcinvoke_accept user_args = {0};
 	struct smcinvoke_cb_txn *cb_txn = NULL;
@@ -1558,12 +1578,18 @@ static long process_accept_req(struct file *filp, unsigned int cmd,
 
 	mutex_lock(&g_smcinvoke_lock);
 	server_info = get_cb_server_locked(server_obj->server_id);
-	mutex_unlock(&g_smcinvoke_lock);
+	//mutex_unlock(&g_smcinvoke_lock);
 	if (!server_info) {
 		pr_err("No matching server with server id : %u found\n",
 						server_obj->server_id);
+		mutex_unlock(&g_smcinvoke_lock);
 		return -EINVAL;
 	}
+
+	if (server_info->state == SMCINVOKE_SERVER_STATE_DEFUNCT)
+		server_info->state = 0;
+
+	mutex_unlock(&g_smcinvoke_lock);
 
 	/* First check if it has response otherwise wait for req */
 	if (user_args.has_resp) {
@@ -1576,10 +1602,13 @@ static long process_accept_req(struct file *filp, unsigned int cmd,
 		 * invoke thread died while server was processing cb req.
 		 * if invoke thread dies, it would remove req from Q. So
 		 * no matching cb_txn would be on Q and hence NULL cb_txn.
+		 * In this case, we want this thread to come back and start
+		 * waiting for new cb requests, hence return EAGAIN here
 		 */
 		if (!cb_txn) {
-			pr_err("%s txn %d either invalid or removed from Q\n",
+			pr_err(" smcdebug:  %s txn %d either invalid or removed from Q\n",
 					__func__, user_args.txn_id);
+			ret = -EAGAIN;
 			goto out;
 		}
 		ret = marshal_out_tzcb_req(&user_args, cb_txn,
@@ -1609,7 +1638,7 @@ static long process_accept_req(struct file *filp, unsigned int cmd,
 		ret = wait_event_interruptible(server_info->req_wait_q,
 				!hash_empty(server_info->reqs_table));
 		if (ret) {
-			pr_debug("%s wait_event interrupted: ret = %d\n",
+			pr_err(" smcdebug:  %s wait_event interrupted: ret = %d\n",
 							__func__, ret);
 			/*
 			 * Ideally, we should destroy server if accept threads
@@ -1618,6 +1647,7 @@ static long process_accept_req(struct file *filp, unsigned int cmd,
 			 * server_info invalid. Other accept/invoke threads are
 			 * using server_info and would crash. So dont do that.
 			 */
+			 /*
 			pending_sig = (&current->pending)->signal;
 			if (sigismember(&pending_sig, SIGKILL)) {
 				mutex_lock(&g_smcinvoke_lock);
@@ -1626,6 +1656,11 @@ static long process_accept_req(struct file *filp, unsigned int cmd,
 				wake_up_interruptible(&server_info->rsp_wait_q);
 				mutex_unlock(&g_smcinvoke_lock);
 			}
+			*/
+			mutex_lock(&g_smcinvoke_lock);
+			server_info->state = SMCINVOKE_SERVER_STATE_DEFUNCT;
+			mutex_unlock(&g_smcinvoke_lock);
+			wake_up_interruptible(&server_info->rsp_wait_q);
 			goto out;
 		}
 
@@ -1937,7 +1972,7 @@ static int smcinvoke_probe(struct platform_device *pdev)
 		goto exit_destroy_device;
 	}
 	smcinvoke_pdev = pdev;
-
+	cb_reqs_inflight = 0;
 	return  0;
 
 exit_destroy_device:
@@ -1960,6 +1995,25 @@ static int smcinvoke_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int __maybe_unused smcinvoke_suspend(struct platform_device *pdev,
+					pm_message_t state)
+{
+	int ret = 0;
+
+	mutex_lock(&g_smcinvoke_lock);
+	if (cb_reqs_inflight) {
+		pr_err("Failed to suspend smcinvoke driver\n");
+		ret = -EIO;
+	}
+	mutex_unlock(&g_smcinvoke_lock);
+	return ret;
+}
+
+static int __maybe_unused smcinvoke_resume(struct platform_device *pdev)
+{
+	return 0;
+}
+
 static const struct of_device_id smcinvoke_match[] = {
 	{
 		.compatible = "qcom,smcinvoke",
@@ -1970,6 +2024,8 @@ static const struct of_device_id smcinvoke_match[] = {
 static struct platform_driver smcinvoke_plat_driver = {
 	.probe = smcinvoke_probe,
 	.remove = smcinvoke_remove,
+	.suspend = smcinvoke_suspend,
+	.resume = smcinvoke_resume,
 	.driver = {
 		.name = "smcinvoke",
 		.owner = THIS_MODULE,

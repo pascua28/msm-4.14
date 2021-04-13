@@ -282,6 +282,20 @@ enum dsi_dyn_clk_feature_type {
  * @DSI_CMD_SET_POST_TIMING_SWITCH:        Post timing switch
  * @DSI_CMD_SET_QSYNC_ON                   Enable qsync mode
  * @DSI_CMD_SET_QSYNC_OFF                  Disable qsync mode
+#ifdef VENDOR_EDIT
+ * @liping-m@PSW.MM.Display.LCD.Stability,2018/12/14, add for lcd notes
+ * @DSI_CMD_POST_ON_BACKLIGHT:             Panel on cmd send for AOD and Fingerprint
+ * @DSI_CMD_AOD_ON:                        Panel AOD on cmd
+ * @DSI_CMD_AOD_OFF:                       Panel AOD off cmd
+ * @DSI_CMD_HBM_ON:                        Panel Fingerprint high brightness 670nit on cmd
+ * @DSI_CMD_HBM_OFF:                       Panel Fingerprint high brightness off cmd
+ * @DSI_CMD_AOD_HBM_ON:                    Panel AOD and Fingerprint high brightness  670nit on cmd
+ * @DSI_CMD_AOD_HBM_OFF:                   Panel AOD and Fingerprint high brightness off cmd
+ * @DSI_CMD_SEED_DCI_P3:                   Panel seed level 3 cmd
+ * @DSI_CMD_SEED_SRGB:                     Panel seed SRGB mode cmd
+ * @DSI_CMD_SEED_OFF:                      Panel seed off cmd
+ * @DSI_CMD_NORMAL_HBM_ON:                 Panel normal HBM 600nit on cmd
+#endif
  * @DSI_CMD_SET_MAX
  */
 enum dsi_cmd_set_type {
@@ -308,6 +322,46 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_POST_TIMING_SWITCH,
 	DSI_CMD_SET_QSYNC_ON,
 	DSI_CMD_SET_QSYNC_OFF,
+#ifdef VENDOR_EDIT
+/* liping-m@PSW.MM.Display.LCD.Stability,2018/07/03, optimize screen on*/
+	DSI_CMD_POST_ON_BACKLIGHT,
+	DSI_CMD_AOD_ON,
+	DSI_CMD_AOD_OFF,
+	DSI_CMD_HBM_ON,
+	DSI_CMD_HBM_OFF,
+	DSI_CMD_AOD_HBM_ON,
+	DSI_CMD_AOD_HBM_OFF,
+/*mark.yao@PSW.MM.Display.LCD.Stability,2018/4/28,add for sRGB and DCI-P3*/
+	DSI_CMD_SEED_MODE0,
+	DSI_CMD_SEED_MODE1,
+	DSI_CMD_SEED_MODE2,
+	DSI_CMD_SEED_MODE3,
+	DSI_CMD_SEED_MODE4,
+	DSI_CMD_SEED_OFF,
+	DSI_CMD_NORMAL_HBM_ON,
+	DSI_CMD_NORMAL_652NIT_HBM_ON,
+	DSI_CMD_NORMAL_573NIT_HBM_ON,
+	DSI_CMD_AOD_HIGH_LIGHT_MODE,
+	DSI_CMD_AOD_LOW_LIGHT_MODE,
+#endif
+	#ifdef ODM_LQ_EDIT
+	/*xuchengxin@ODM_LQ@Multimedia.Dispaly,2019/10/15,add information of cabc to sys/fs */
+	DSI_CMD_SET_CABC_OFF,
+	DSI_CMD_SET_CABC_UI,
+	DSI_CMD_SET_CABC_STILL,
+	DSI_CMD_SET_CABC_MV,
+	#ifdef ODM_TARGET_DEVICE_206B1
+	DSI_CMD_FAILSAFE_ON,
+	DSI_CMD_FAILSAFE_OFF,
+	DSI_CMD_SEED_ENTER,
+	DSI_CMD_SEED_EXIT,
+	DSI_CMD_SET_BACKLIGHT,
+	DSI_CMD_SET_BACKLIGHT_SEED0,
+	DSI_CMD_SET_BACKLIGHT_SEED1,
+	DSI_CMD_SET_BACKLIGHT_SEED4,
+	DSI_CMD_FINGERPRINT_HBM_OFF,
+	#endif /*ODM_TARGET_DEVICE_206B1*/
+	#endif /*ODM_LQ_EDIT*/
 	DSI_CMD_SET_MAX
 };
 
@@ -559,7 +613,7 @@ struct dsi_cmd_engine_cfg {
  * @common_config:         Host configuration common to both Video and Cmd mode.
  * @video_engine:          Video engine configuration if panel is in video mode.
  * @cmd_engine:            Cmd engine configuration if panel is in cmd mode.
- * @esc_clk_rate_khz:      Esc clock frequency in Hz.
+ * @esc_clk_rate_hz: 	 Esc clock frequency in Hz.
  * @bit_clk_rate_hz:       Bit clock frequency in Hz.
  * @bit_clk_rate_hz_override: DSI bit clk rate override from dt/sysfs.
  * @video_timing:          Video timing information of a frame.

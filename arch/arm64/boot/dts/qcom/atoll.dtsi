@@ -490,7 +490,12 @@
 			compatible = "android,firmware";
 			vbmeta {
 				compatible = "android,vbmeta";
-				parts = "vbmeta,boot,system,vendor,dtbo";
+			/*#ifndef ODM_LQ_EDIT*/
+			/*Hongbin.Chen@ODM_LQ@BSP.Partition,2019/10/12,modified for update partition*/
+			/*	parts = "vbmeta,boot,system,vendor,dtbo";*/
+			/*#else*/
+				parts = "vbmeta,boot,system,vendor,dtbo,recovery";
+			/*#endif*/
 			};
 			fstab {
 				compatible = "android,fstab";
@@ -499,7 +504,12 @@
 					dev = "/dev/block/platform/soc/1d84000.ufshc/by-name/vendor";
 					type = "ext4";
 					mnt_flags = "ro,barrier=1,discard";
-					fsmgr_flags = "wait,slotselect,avb";
+			/*#ifndef ODM_LQ_EDIT*/
+			/*Hongbin.Chen@ODM_LQ@BSP.Partition,2019/10/12,modified for update partition*/
+			/*		fsmgr_flags = "wait,slotselect,avb";*/
+			/*#else*/
+					fsmgr_flags = "wait,avb";
+			/*#endif*/
 					status = "ok";
 				};
 			};
@@ -1486,6 +1496,20 @@
 		qcom,client-id = <0x00000001>;
 		qcom,guard-memory;
 	};
+
+    //#ifdef VENDOR_EDIT
+    //Zhengpeng.Tan@NW.AP.NV.892767, 2016/11/30
+    //#ifdef FEATURE_OPPO_NV_BACKUP
+    //add for creating a shared memory with uio for nv backup and restore
+    qcom,oembackup_sharedmem@0 {
+        compatible = "qcom,sharedmem-uio";
+        reg = <0x0 0x00100000>;
+        reg-names = "oembackup";
+        qcom,client-id = <0x00000004>;
+        qcom,guard-memory;
+    };
+    //#endif /* FEATURE_OPPO_NV_BACKUP */
+    //#endif /* VENDOR_EDIT */
 
 	pil_modem: qcom,mss@4080000 {
 		compatible = "qcom,pil-tz-generic";
