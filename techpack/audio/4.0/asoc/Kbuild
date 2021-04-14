@@ -208,12 +208,10 @@ ifeq ($(KERNEL_BUILD), 0)
 		KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/4.0/asoc/codecs/Module.symvers
 		KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/4.0/asoc/codecs/wcd934x/Module.symvers
 		KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/4.0/asoc/codecs/wcd937x/Module.symvers
-		ifeq ($(ODM_LQ_EDIT), yes)
 		#shentaotao@ODM_LQ@Multimedia.Audio,2019/10/08,modified for audio bringup
 		KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/4.0/asoc/codecs/tfa98xx-v6/Module.symvers
 		KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/4.0/asoc/codecs/aw882xx/Module.symvers
 		KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/4.0/asoc/codecs/sia81xx/Module.symvers
-		endif
 		KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/4.0/asoc/codecs/wcd938x/Module.symvers
 	else
 		KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/dsp/Module.symvers
