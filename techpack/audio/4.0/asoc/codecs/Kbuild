@@ -220,8 +220,10 @@ ifeq ($(KERNEL_BUILD), 1)
 	#shentaotao@ODM_LQ@Multimedia.Audio,2019/10/08,modified for audio bringup
 	obj-y	+= wcd934x/
 	obj-y	+= wcd937x/
+ifeq ($(CONFIG_SND_SOC_MSM_QDSP6V2_VM), y)
 	obj-y	+= tfa98xx-v6/
 	obj-y	+= aw882xx/
+endif
 	obj-y	+= wcd938x/
 	obj-y	+= bolero/
 	obj-y	+= sia81xx/
