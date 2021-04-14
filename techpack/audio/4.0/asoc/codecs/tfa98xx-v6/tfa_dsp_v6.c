@@ -39,7 +39,6 @@ struct smart_pa_range{
 /* chengong@ODM_LQ@Multimedia.Audio,2019/11/06,add for nxp smartpa */
 #define OPPO_19031 0
 #define OPPO_19111 1
-unsigned int is_project(OPPO_PROJECT project) {return 0;};
 struct smart_pa_range smart_pa_range_info[] = {
 	{OPPO_19031, 5000, 7800},
 	{OPPO_19111, 5000, 7800},
