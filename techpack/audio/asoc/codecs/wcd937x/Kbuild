@@ -84,6 +84,13 @@ CDEFINES +=	-DANI_LITTLE_BYTE_ENDIAN \
 		-Werror\
 		-D__linux__
 
+#ifdef VENDOR_EDIT
+#Yongzhi.Zhang@PSW.MM.AudioDriver.Codec, 2019/07/20, add for dbmdx
+ifneq ($(filter MSM_19031 MSM_19111, $(OPPO_TARGET_DEVICE)),)
+CDEFINES += -DDBMDX_SOUND_TRIGGER_SUPPORT
+endif
+#endif /* VENDOR_EDIT */
+
 KBUILD_CPPFLAGS += $(CDEFINES)
 
 # Currently, for versions of gcc which support it, the kernel Makefile

@@ -1,6 +1,15 @@
 # Android makefile for audio kernel modules
 MY_LOCAL_PATH := $(call my-dir)
 
+ifeq ($(ODM_LQ_EDIT), yes)
+#shentaotao@ODM_LQ@Multimedia.Audio,2019/10/08,modified for audio bringup
+LOCAL_CFLAGS += -DODM_LQ_EDIT
+endif
+
+ifneq ($(filter MSM_206B1, $(OPPO_TARGET_DEVICE)),)
+LOCAL_CFLAGS += -DODM_TARGET_DEVICE_206B1
+endif
+
 ifeq ($(call is-board-platform-in-list,msm8953 sdm845 sdm670 sdm660 qcs605 msmnile $(MSMSTEPPE) $(TRINKET)),true)
 UAPI_OUT := $(PRODUCT_OUT)/obj/vendor/qcom/opensource/audio-kernel/include
 
@@ -62,6 +71,17 @@ $(shell rm -rf $(PRODUCT_OUT)/obj/vendor/qcom/opensource/audio-kernel/4.0/asoc/c
 include $(MY_LOCAL_PATH)/4.0/asoc/codecs/bolero/Android.mk
 $(shell rm -rf $(PRODUCT_OUT)/obj/vendor/qcom/opensource/audio-kernel/4.0/asoc/codecs/wcd937x/Module.symvers)
 include $(MY_LOCAL_PATH)/4.0/asoc/codecs/wcd937x/Android.mk
+ifeq ($(ODM_LQ_EDIT), yes)
+#chengong@ODM_LQ@Multimedia.Audio,2019/11/06,add for tfa smartpa
+$(shell rm -rf $(PRODUCT_OUT)/obj/vendor/qcom/opensource/audio-kernel/4.0/asoc/codecs/tfa98xx-v6/Module.symvers)
+include $(MY_LOCAL_PATH)/4.0/asoc/codecs/tfa98xx-v6/Android.mk
+
+$(shell rm -rf $(PRODUCT_OUT)/obj/vendor/qcom/opensource/audio-kernel/4.0/asoc/codecs/aw882xx/Module.symvers)
+include $(MY_LOCAL_PATH)/4.0/asoc/codecs/aw882xx/Android.mk
+
+$(shell rm -rf $(PRODUCT_OUT)/obj/vendor/qcom/opensource/audio-kernel/4.0/asoc/codecs/sia81xx/Module.symvers)
+include $(MY_LOCAL_PATH)/4.0/asoc/codecs/sia81xx/Android.mk
+endif
 $(shell rm -rf $(PRODUCT_OUT)/obj/vendor/qcom/opensource/audio-kernel/4.0/asoc/codecs/wcd938x/Module.symvers)
 include $(MY_LOCAL_PATH)/4.0/asoc/codecs/wcd938x/Android.mk
 endif

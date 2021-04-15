@@ -87,6 +87,13 @@ struct wcd937x_priv {
 	int ear_rx_path;
 	int ana_clk_count;
 	struct mutex ana_tx_clk_lock;
+#ifdef VENDOR_EDIT
+#ifdef ODM_TARGET_DEVICE_206B1
+//chengong@ODM_LQ@Multimedia.Audio,2020/07/21,add for disable mic pop
+	int micbias_delay_mode;
+	int micbias_count;
+#endif
+#endif
 };
 
 struct wcd937x_micbias_setting {

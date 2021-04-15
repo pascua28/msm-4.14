@@ -26,6 +26,16 @@
 #include "wcd-mbhc-adc.h"
 #include <asoc/wcd-mbhc-v2-api.h>
 
+#ifdef ODM_LQ_EDIT
+/* add begin by zhangchaofan@ODM_LQ@Multimedia.TP, for tp check_headset_state 2019-11-28*/
+/*
+ *  * check_headset_state----expose to be called by audio int to get headset state
+ *   * @headset_state : 1 if headset checked, otherwise is 0
+ *   */
+extern void switch_headset_state(int headset_state);
+/* add end by zhangchaofan@ODM_LQ@Multimedia.TP, for tp check_headset_state 2019-11-28 */
+#endif
+
 void wcd_mbhc_jack_report(struct wcd_mbhc *mbhc,
 			  struct snd_soc_jack *jack, int status, int mask)
 {
@@ -300,7 +310,26 @@ out_micb_en:
 			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_PULLUP);
 		else
 			/* enable current source and disable mb, pullup*/
+			#ifndef VENDOR_EDIT
+                        /* Jianfeng.Qiu@PSW.MM.AudioDriver.HeadsetDet, 2017/04/10,
+                         * 1.Modify for some headset button not work after headset mic
+                         * stop use.(ex: stop recording, hangup voice call without plug
+                         * out headset).
+                         * 2. Modify for headphone wrong detect as headset.1247369.
+                         * step: plug out headset when recording or in voice call,
+                         * then plug in a headphone, it detect as headset.
+                         */
 			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_CS);
+			#else /* VENDOR_EDIT */
+                        {
+                                pr_info("%s: current_plug %d\n", __func__, mbhc->current_plug);
+                                if (mbhc->current_plug == MBHC_PLUG_TYPE_HEADSET) {
+                                        wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_MB);
+                                } else {
+                                        wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_CS);
+                                }
+                        }
+                        #endif /* VENDOR_EDIT */
 
 		/* configure cap settings properly when micbias is disabled */
 		if (mbhc->mbhc_cb->set_cap_mode)
@@ -599,6 +628,11 @@ void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 		hphlocp_off_report(mbhc, SND_JACK_OC_HPHL);
 		mbhc->current_plug = MBHC_PLUG_TYPE_NONE;
 		mbhc->force_linein = false;
+		#ifdef ODM_LQ_EDIT
+		/* add begin by zhangchaofan@ODM_LQ@Multimedia.TP, for tp check_headset_state 2019-11-28*/
+		switch_headset_state(0);
+		/* add end by zhangchaofan@ODM_LQ@Multimedia.TP, for tp check_headset_state 2019-11-28 */
+		#endif
 	} else {
 		/*
 		 * Report removal of current jack type.
@@ -739,6 +773,11 @@ void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 				    (mbhc->hph_status | SND_JACK_MECHANICAL),
 				    WCD_MBHC_JACK_MASK);
 		wcd_mbhc_clr_and_turnon_hph_padac(mbhc);
+		#ifdef ODM_LQ_EDIT
+		/* add begin by zhangchaofan@ODM_LQ@Multimedia.TP, for tp check_headset_state 2019-11-28*/
+		switch_headset_state(1);
+		/* add end by zhangchaofan@ODM_LQ@Multimedia.TP, for tp check_headset_state 2019-11-28 */
+		#endif
 	}
 	pr_debug("%s: leave hph_status %x\n", __func__, mbhc->hph_status);
 }

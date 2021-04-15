@@ -20,7 +20,14 @@
 #include <asoc/wcd-mbhc-v2-api.h>
 #include "internal.h"
 
+#ifdef VENDOR_EDIT
+/* Yongzhi.Zhang@PSW.MM.AudioDriver.HeadsetDet, 2019/10/11,
+ * modify for removing impedance detection */
+#define WCD937X_ZDET_SUPPORTED          false
+#else /* VENDOR_EDIT */
 #define WCD937X_ZDET_SUPPORTED          true
+#endif /* VENDOR_EDIT */
+
 /* Z value defined in milliohm */
 #define WCD937X_ZDET_VAL_32             32000
 #define WCD937X_ZDET_VAL_400            400000

@@ -217,10 +217,21 @@ ifeq ($(KERNEL_BUILD), 0)
 endif
 
 ifeq ($(KERNEL_BUILD), 1)
+	ifeq ($(ODM_LQ_EDIT), yes)
+	#shentaotao@ODM_LQ@Multimedia.Audio,2019/10/08,modified for audio bringup
+	obj-y	+= wcd934x/
+	obj-y	+= wcd937x/
+	obj-y	+= tfa98xx-v6/
+	obj-y	+= aw882xx/
+	obj-y	+= wcd938x/
+	obj-y	+= bolero/
+	obj-y	+= sia81xx/
+	else
 	obj-y	+= wcd934x/
 	obj-y	+= wcd937x/
 	obj-y	+= wcd938x/
 	obj-y	+= bolero/
+	endif
 endif
 # Module information used by KBuild framework
 obj-$(CONFIG_WCD9XXX_CODEC_CORE) += wcd_core_dlkm.o
