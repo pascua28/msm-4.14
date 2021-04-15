@@ -180,7 +180,12 @@ static const struct reg_default wcd937x_defaults[] = {
 	{ WCD937X_SLEEP_WATCHDOG_CTL,            0x00 },
 	{ WCD937X_MBHC_NEW_ELECT_REM_CLAMP_CTL,  0x00 },
 	{ WCD937X_MBHC_NEW_CTL_1,                0x02 },
+	#ifdef ODM_LQ_EDIT
+	/*shentaotao@ODM_LQ@Multimedia.Audio,2019/10/08,modified for audio bringup*/
+	{ WCD937X_MBHC_NEW_CTL_2,                0x01 },
+	#else
 	{ WCD937X_MBHC_NEW_CTL_2,                0x05 },
+	#endif /*ODM_LQ_EDIT*/
 	{ WCD937X_MBHC_NEW_PLUG_DETECT_CTL,      0xE9 },
 	{ WCD937X_MBHC_NEW_ZDET_ANA_CTL,         0x0F },
 	{ WCD937X_MBHC_NEW_ZDET_RAMP_CTL,        0x00 },

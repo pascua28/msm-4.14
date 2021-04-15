@@ -2973,6 +2973,16 @@ exit:
  *
  * Returns 0 on success or error on failure
  */
+#ifdef VENDOR_EDIT
+/*Jianfeng.Qiu@PSW.MM.AudioDriver.Platform.1859584, 2019/02/27,
+ *Add for fix lvimfq not support sample_rate issue.
+ */
+#define VOICE_TOPOLOGY_LVIMFQ_TX_DM    0x1000BFF5
+#define VOICE_TOPOLOGY_LVVEFQ_TX_SM    0x1000BFF0
+#define VOICE_TOPOLOGY_LVVEFQ_TX_DM    0x1000BFF1
+#define NXP_SUPPORTED_BITS_PER_SAMPLE 16
+#define NXP_NOT_SUPPORTED_BITS_PER_SAMPLE 24
+#endif /* VENDOR_EDIT */
 int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 	     int perf_mode, uint16_t bit_width, int app_type, int acdb_id,
 	     int session_type)
@@ -3058,6 +3068,29 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 		    (rate != ADM_CMD_COPP_OPEN_SAMPLE_RATE_32K))
 			rate = 16000;
 	}
+        #ifdef VENDOR_EDIT
+	/*Jianfeng.Qiu@PSW.MM.AudioDriver.Platform.1859584, 2019/02/27,
+	 *Add for fix lvimfq not support sample_rate issue.
+	 */
+	if ((topology == VOICE_TOPOLOGY_LVIMFQ_TX_DM)
+		&& (rate != ADM_CMD_COPP_OPEN_SAMPLE_RATE_48K)) {
+		pr_info("%s: Change rate %d to 48K for copp 0x%x",
+			__func__, rate, topology);
+		rate = 48000;
+	}
+
+    //chengong@ODM_LQ@Multimedia.Audio,2019/12/31,add for nxp voice
+	if ((topology == VOICE_TOPOLOGY_LVIMFQ_TX_DM) ||
+		(topology == VOICE_TOPOLOGY_LVVEFQ_TX_SM) ||
+		(topology == VOICE_TOPOLOGY_LVVEFQ_TX_DM) ||
+		(topology == VPM_TX_DM_FLUENCE_EF_COPP_TOPOLOGY)) {
+		if (bit_width == NXP_NOT_SUPPORTED_BITS_PER_SAMPLE) {
+			pr_info("%s: Change bit_width %d to 16bit for copp 0x%x",
+				__func__, bit_width, topology);
+			bit_width = NXP_SUPPORTED_BITS_PER_SAMPLE;
+		}
+	}
+	#endif /* VENDOR_EDIT */
 
 	if (topology == FFECNS_TOPOLOGY) {
 		this_adm.ffecns_port_id = port_id;

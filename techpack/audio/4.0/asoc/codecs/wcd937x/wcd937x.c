@@ -758,6 +758,10 @@ static int wcd937x_codec_enable_hphl_pa(struct snd_soc_dapm_widget *w,
 				WCD937X_IRQ_HPHL_PDM_WD_INT);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
+		#ifdef ODM_LQ_EDIT
+		//chengong@ODM_LQ@Multimedia.Audio,2019/11/13,add for fix hph pop noise
+		snd_soc_update_bits(codec, WCD937X_HPH_L_TEST, 0x01, 0x00);
+		#endif
 		wcd_disable_irq(&wcd937x->irq_info,
 				WCD937X_IRQ_HPHL_PDM_WD_INT);
 		if (wcd937x->update_wcd_event)
@@ -1550,6 +1554,11 @@ static int __wcd937x_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	int micb_num;
+#ifdef VENDOR_EDIT
+#ifdef ODM_TARGET_DEVICE_206B1
+	struct wcd937x_priv *wcd937x = snd_soc_codec_get_drvdata(codec);
+#endif
+#endif
 
 	dev_dbg(codec->dev, "%s: wname: %s, event: %d\n",
 		__func__, w->name, event);
@@ -1569,9 +1578,32 @@ static int __wcd937x_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		usleep_range(1000, 1100);
+#ifdef VENDOR_EDIT
+#ifdef ODM_TARGET_DEVICE_206B1
+//chengong@ODM_LQ@Multimedia.Audio,2020/07/21,add for disable mic pop
+		if (wcd937x->micbias_delay_mode)
+			wcd937x->micbias_count++;
+		pr_debug("%s: micbias_delay_mode %d, micbias_count %d\n",
+			__func__, wcd937x->micbias_delay_mode, wcd937x->micbias_count);
+		if (wcd937x->micbias_delay_mode &&
+			(wcd937x->micbias_delay_mode == wcd937x->micbias_count)) {
+			usleep_range(200 * 1000, 200 * 1100);
+			dev_dbg(codec->dev, "%s: wname: %s delay 200ms\n", __func__, w->name);
+		}
+#endif
+#endif
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		wcd937x_micbias_control(codec, micb_num, MICB_DISABLE, true);
+#ifdef VENDOR_EDIT
+#ifdef ODM_TARGET_DEVICE_206B1
+//chengong@ODM_LQ@Multimedia.Audio,2020/07/21,add for disable mic pop
+		if (wcd937x->micbias_delay_mode) {
+			wcd937x->micbias_count = 0;
+			wcd937x->micbias_delay_mode = 0;
+		}
+#endif
+#endif
 		break;
 	};
 
@@ -1788,6 +1820,128 @@ static int wcd937x_codec_enable_vdd_buck(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
+#ifdef VENDOR_EDIT
+//Le.Li@PSW.MM.AudioDriver.FTM.954616, 2018/03/15, Add for FTM micbias test
+static int micbias_get(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	int val=0;
+	int reg1_val = 0;
+	int reg2_val = 0;
+	int reg3_val = 0;
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+
+	reg1_val = (snd_soc_read(codec, WCD937X_ANA_MICB1) >> 6);
+	reg2_val = (snd_soc_read(codec, WCD937X_ANA_MICB2) >> 6);
+	reg3_val = (snd_soc_read(codec, WCD937X_ANA_MICB3) >> 6);
+	if (reg1_val == 0x01) {
+		val = 1;
+	} else if (reg2_val == 0x01){
+		val = 2;
+	} else if (reg3_val == 0x01){
+		val = 3;
+	} else {
+		val = 0;
+	}
+
+	ucontrol->value.integer.value[0] = val;
+	pr_err("%s val: %d\n", __func__, val);
+	return val;
+}
+
+static int micbias_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+
+	dev_err(codec->dev, "%s enter \n", __func__);
+	dev_err(codec->dev, "%s  micbias_put %ld : \n",__func__, ucontrol->value.integer.value[0]);
+	switch (ucontrol->value.integer.value[0]){
+	case 0:
+		wcd937x_micbias_control(codec, MIC_BIAS_1, MICB_DISABLE, false);
+		wcd937x_micbias_control(codec, MIC_BIAS_2, MICB_DISABLE, false);
+		wcd937x_micbias_control(codec, MIC_BIAS_3, MICB_DISABLE, false);
+//		tavil_cdc_mclk_enable(codec, false);
+		break;
+	case 1:
+//		tavil_cdc_mclk_enable(codec, true);
+		wcd937x_micbias_control(codec, MIC_BIAS_1, MICB_ENABLE, false);
+		break;
+	case 2:
+//		tavil_cdc_mclk_enable(codec, true);
+		wcd937x_micbias_control(codec, MIC_BIAS_2, MICB_ENABLE, false);
+		break;
+	case 3:
+		wcd937x_micbias_control(codec, MIC_BIAS_3, MICB_ENABLE, false);
+		break;
+#ifdef DBMDX_SOUND_TRIGGER_SUPPORT
+	/* Yongzhi.Zhang@PSW.MM.AudioDriver.Codec, 2019/07/20, add for dbmdx */
+	case 4:
+		wcd937x_micbias_control(codec, MIC_BIAS_1, MICB_ENABLE, false);
+		break;
+	case 5:
+		wcd937x_micbias_control(codec, MIC_BIAS_2, MICB_ENABLE, false);
+		break;
+	case 6:
+		wcd937x_micbias_control(codec, MIC_BIAS_3, MICB_ENABLE, false);
+		break;
+#endif /* DBMDX_SOUND_TRIGGER_SUPPORT */
+	default:
+		dev_err(codec->dev, "%s invalid val \n", __func__);
+	}
+	return 0;
+}
+
+static int ftm_wcd937x_rev_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct wcd937x_priv *wcd937x = snd_soc_codec_get_drvdata(codec);
+
+	dev_err(codec->dev, "%s enter!\n", __func__);
+	pr_err("%s: wcd937x->variant = %d!\n", __func__, wcd937x->variant);
+
+	if (wcd937x->variant == WCD9370_VARIANT) {
+		ucontrol->value.integer.value[0] = 1;
+		pr_err("%s: wcd937x->variant = WCD9370_VARIANT!\n", __func__);
+	} else {
+		ucontrol->value.integer.value[0] = 0;
+	}
+	return 1;
+}
+
+static int ftm_wcd937x_rev_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+
+#ifdef ODM_TARGET_DEVICE_206B1
+//chengong@ODM_LQ@Multimedia.Audio,2020/07/21,add for disable mic pop
+static int micbias_delay_mode_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct wcd937x_priv *wcd937x = snd_soc_codec_get_drvdata(codec);
+
+	ucontrol->value.integer.value[0] = wcd937x->micbias_delay_mode;
+
+	return 0;
+}
+
+static int micbias_delay_mode_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct wcd937x_priv *wcd937x = snd_soc_codec_get_drvdata(codec);
+	int delay_mode = ucontrol->value.integer.value[0];
+
+	if (delay_mode > 3 || delay_mode < 0)
+		delay_mode = 0;
+	pr_debug("%s: micbias delay mode %d", __func__, delay_mode);
+	wcd937x->micbias_delay_mode = delay_mode;
+
+	return 0;
+}
+#endif
+#endif /* VENDOR_EDIT */
+
 static const char * const rx_hph_mode_mux_text[] = {
 	"CLS_H_INVALID", "CLS_H_HIFI", "CLS_H_LP", "CLS_AB", "CLS_H_LOHIFI",
 	"CLS_H_ULP", "CLS_AB_HIFI",
@@ -1808,7 +1962,39 @@ static const struct soc_enum rx_hph_mode_mux_enum =
 static SOC_ENUM_SINGLE_EXT_DECL(wcd937x_ear_pa_gain_enum,
 				wcd937x_ear_pa_gain_text);
 
+#ifdef VENDOR_EDIT
+//Le.Li@PSW.MM.AudioDriver.FTM.954616, 2018/03/15, Add for FTM micbias test
+static char const *ftm_wcd937x_micbias_ctrl_text[] = {"DISABLE", "MICBIAS1", "MICBIAS2", "MICBIAS3", "FORCE_MICBIAS1", "FORCE_MICBIAS2", "FORCE_MICBIAS3"};
+static SOC_ENUM_SINGLE_EXT_DECL(ftm_wcd937x_micbias_ctl_enum, ftm_wcd937x_micbias_ctrl_text);
+
+static char const *ftm_wcd937x_rev_text[] = {"NG", "OK"};
+static SOC_ENUM_SINGLE_EXT_DECL(ftm_wcd937x_rev_enum, ftm_wcd937x_rev_text);
+
+#ifdef ODM_TARGET_DEVICE_206B1
+//chengong@ODM_LQ@Multimedia.Audio,2020/07/21,add for disable mic pop
+static char const *micbias_delay_mode_text[] = {"ZERO", "One", "Two"};
+static SOC_ENUM_SINGLE_EXT_DECL(micbias_delay_mode_enum, micbias_delay_mode_text);
+#endif
+#endif /* VENDOR_EDIT */
+
 static const struct snd_kcontrol_new wcd937x_snd_controls[] = {
+	#ifdef VENDOR_EDIT
+	/*Jianfeng.Qiu@PSW.MM.AudioDriver.FTM.954616, 2016/08/24,
+	 *Add for AT command to enable micbias.
+	 */
+	//Le.Li@PSW.MM.AudioDriver.FTM.954616, 2018/03/15, Add for FTM micbias test
+	SOC_ENUM_EXT("Enable Micbias", ftm_wcd937x_micbias_ctl_enum,
+		micbias_get, micbias_put),
+
+	SOC_ENUM_EXT("HP_Pa Revision", ftm_wcd937x_rev_enum,
+		ftm_wcd937x_rev_get, ftm_wcd937x_rev_put),
+	#ifdef ODM_TARGET_DEVICE_206B1
+	//chengong@ODM_LQ@Multimedia.Audio,2020/07/21,add for disable mic pop
+	SOC_ENUM_EXT("MICBIAS_DELAY_MODE", micbias_delay_mode_enum,
+		micbias_delay_mode_get, micbias_delay_mode_put),
+	#endif
+	#endif /* VENDOR_EDIT */
+
 	SOC_ENUM_EXT("EAR PA GAIN", wcd937x_ear_pa_gain_enum,
 		wcd937x_ear_pa_gain_get, wcd937x_ear_pa_gain_put),
 	SOC_ENUM_EXT("RX HPH Mode", rx_hph_mode_mux_enum,
@@ -2761,6 +2947,14 @@ static int wcd937x_bind(struct device *dev)
 		dev_err(dev, "%s: Fail to obtain platform data\n", __func__);
 		return -EINVAL;
 	}
+#ifdef VENDOR_EDIT
+#ifdef ODM_TARGET_DEVICE_206B1
+//chengong@ODM_LQ@Multimedia.Audio,2020/07/21,add for disable mic pop
+	wcd937x->micbias_delay_mode = 0;
+	wcd937x->micbias_count = 0;
+#endif
+#endif
+
 	wcd937x->dev = dev;
 	wcd937x->dev->platform_data = pdata;
 	wcd937x->rst_np = pdata->rst_np;

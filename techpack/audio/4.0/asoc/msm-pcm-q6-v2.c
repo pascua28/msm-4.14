@@ -1298,6 +1298,7 @@ static int msm_pcm_adsp_stream_cmd_put(struct snd_kcontrol *kcontrol,
 		goto done;
 	}
 
+	mutex_lock(&pdata->lock);
 	event_data = (struct msm_adsp_event_data *)ucontrol->value.bytes.data;
 	if ((event_data->event_type < ADSP_STREAM_PP_EVENT) ||
 	    (event_data->event_type >= ADSP_STREAM_EVENT_MAX)) {
@@ -1761,6 +1762,9 @@ static int msm_pcm_chmap_ctl_get(struct snd_kcontrol *kcontrol,
 	struct msm_audio *prtd;
 	struct snd_soc_pcm_runtime *rtd = NULL;
 	struct msm_plat_data *pdata = NULL;
+	#ifndef ODM_LQ_EDIT
+	struct snd_soc_component *component = NULL;
+	#endif
 
 	pr_debug("%s", __func__);
 	substream = snd_pcm_chmap_substream(info, idx);
@@ -1769,8 +1773,13 @@ static int msm_pcm_chmap_ctl_get(struct snd_kcontrol *kcontrol,
 
 	rtd = substream->private_data;
 	if (rtd) {
+		#ifdef ODM_LQ_EDIT
+		pdata = (struct msm_plat_data *)
+					dev_get_drvdata(rtd->platform->dev);
+		#else
 		pdata = (struct msm_plat_data *)
 			dev_get_drvdata(rtd->platform->dev);
+		#endif
 		if (!pdata) {
 			pr_err("%s: pdata not found\n", __func__);
 			return -ENODEV;

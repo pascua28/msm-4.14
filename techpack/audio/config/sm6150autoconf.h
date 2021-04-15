@@ -59,3 +59,27 @@
 #define CONFIG_SND_SOC_WCD937X 1
 #define CONFIG_SND_SOC_WCD937X_SLAVE 1
 #define CONFIG_SND_EVENT 1
+
+#ifdef VENDOR_EDIT
+/*Jianfeng.Qiu@PSW.MM.AudioDriver.Codec, 2018/04/20, Add for MBHC*/
+#define CONFIG_SND_SOC_WCD_MBHC_LEGACY 1
+#endif /* VENDOR_EDIT */
+
+#ifdef VENDOR_EDIT
+/*Jianfeng.Qiu@PSW.MM.AudioDriver.Codec, 2018/04/20, Add for tfa9894 codec*/
+#define CONFIG_SND_SOC_TFA9894 1
+#endif /* VENDOR_EDIT */
+
+#ifdef VENDOR_EDIT
+/*Jianfeng.Qiu@PSW.MM.AudioDriver.Codec, 2018/04/20, Add for ak43xx codec*/
+#define CONFIG_SND_SOC_AK4376 1
+#endif /* VENDOR_EDIT */
+
+
+#ifdef VENDOR_EDIT
+/*xiang.fei@PSW.MM.AudioDriver.Codec, 2018/10/29, Add for dbmdx*/
+#define CONFIG_SND_SOC_DBMDX 1
+#define CONFIG_SND_SOC_DBMDX_MODULE 1
+#define CONFIG_SND_SOC_DBMDX_SND_CAPTURE 1
+#define CONFIG_SND_SOC_DBMD4_SPI 1
+#endif /* VENDOR_EDIT */

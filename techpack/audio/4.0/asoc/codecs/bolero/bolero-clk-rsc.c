@@ -293,6 +293,7 @@ static int bolero_clk_rsc_mux1_clk_request(struct bolero_clk_rsc *priv,
 					trace_printk("%s: muxsel value after enable: %d\n",
 							__func__, muxsel);
 				}
+
 				bolero_clk_rsc_mux0_clk_request(priv,
 							default_clk_id,
 							false);
@@ -328,6 +329,7 @@ static int bolero_clk_rsc_mux1_clk_request(struct bolero_clk_rsc *priv,
 					}
 				}
 			}
+
 			if (priv->clk[clk_id + NPL_CLK_OFFSET])
 				clk_disable_unprepare(
 					priv->clk[clk_id + NPL_CLK_OFFSET]);
