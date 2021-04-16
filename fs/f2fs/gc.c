@@ -15,7 +15,6 @@
 #include <linux/freezer.h>
 #include <linux/pm_wakeup.h>
 #include <linux/msm_drm_notify.h>
-#include <linux/power_supply.h>
 
 #include "f2fs.h"
 #include "node.h"
@@ -23,7 +22,7 @@
 #include "gc.h"
 #include <trace/events/f2fs.h>
 
-#define TRIGGER_RAPID_GC (!screen_on && power_supply_is_system_supplied())
+#define TRIGGER_RAPID_GC (!screen_on && f2fs_device.battery_charging)
 static bool screen_on = true;
 static LIST_HEAD(gc_sbi_list);
 static DEFINE_MUTEX(gc_wakelock_mutex);
