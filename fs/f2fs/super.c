@@ -1181,7 +1181,6 @@ static void destroy_device_list(struct f2fs_sb_info *sbi)
 	kvfree(sbi->devs);
 }
 
-#if defined(CONFIG_ARCH_MSM) || defined(CONFIG_ARCH_QCOM)
 static void f2fs_umount_end(struct super_block *sb, int flags)
 {
 	/*
@@ -1199,7 +1198,6 @@ static void f2fs_umount_end(struct super_block *sb, int flags)
 		}
 	}
 }
-#endif
 
 static void f2fs_put_super(struct super_block *sb)
 {
@@ -2359,9 +2357,7 @@ static const struct super_operations f2fs_sops = {
 #endif
 	.evict_inode	= f2fs_evict_inode,
 	.put_super	= f2fs_put_super,
-#if defined(CONFIG_ARCH_MSM) || defined(CONFIG_ARCH_QCOM)
 	.umount_end	= f2fs_umount_end,
-#endif
 	.sync_fs	= f2fs_sync_fs,
 	.freeze_fs	= f2fs_freeze,
 	.unfreeze_fs	= f2fs_unfreeze,
