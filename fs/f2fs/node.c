@@ -1504,7 +1504,6 @@ static int __write_node_page(struct page *page, bool atomic, bool *submitted,
 		.io_wbc = wbc,
 	};
 	unsigned int seq;
-        int ret;
 
 	trace_f2fs_writepage(page, NODE);
 
@@ -1522,12 +1521,8 @@ static int __write_node_page(struct page *page, bool atomic, bool *submitted,
 	nid = nid_of_node(page);
 	f2fs_bug_on(sbi, page->index != nid);
 
-	ret = f2fs_get_node_info(sbi, nid, &ni);
-	if (ret) {
-		if (ret == -EFAULT)
-			f2fs_bug_on(sbi, 1);
+	if (f2fs_get_node_info(sbi, nid, &ni))
 		goto redirty_out;
-	}
 
 	if (wbc->for_reclaim) {
 		if (!down_read_trylock(&sbi->node_write))
