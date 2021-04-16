@@ -1339,13 +1339,7 @@ static int do_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 	int err;
 
 	/* Flush all the NAT/SIT pages */
-	while (get_pages(sbi, F2FS_DIRTY_META)) {
-	        f2fs_sync_meta_pages(sbi, META, LONG_MAX, FS_CP_META_IO);
-	        if (unlikely(f2fs_cp_error(sbi)))
-	                break;
-	}
-	f2fs_bug_on(sbi, get_pages(sbi, F2FS_DIRTY_META) &&
-					!f2fs_cp_error(sbi));
+	f2fs_sync_meta_pages(sbi, META, LONG_MAX, FS_CP_META_IO);
 
 	/*
 	 * modify checkpoint
@@ -1452,11 +1446,7 @@ static int do_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 	percpu_counter_set(&sbi->alloc_valid_block_count, 0);
 
 	/* Here, we have one bio having CP pack except cp pack 2 page */
-	while (get_pages(sbi, F2FS_DIRTY_META)) {
-	        f2fs_sync_meta_pages(sbi, META, LONG_MAX, FS_CP_META_IO);
-	        if (unlikely(f2fs_cp_error(sbi)))
-	                break;
-	}
+	f2fs_sync_meta_pages(sbi, META, LONG_MAX, FS_CP_META_IO);
 
 	/* Wait for all dirty meta pages to be submitted for IO */
 	f2fs_wait_on_all_pages(sbi, F2FS_DIRTY_META);
