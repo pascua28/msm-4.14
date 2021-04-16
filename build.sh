@@ -8,6 +8,8 @@ else
 	make O=out oldconfig
 fi
 
-make O=out CC=$CLANG_DIR CLANG_TRIPLE=aarch64-linux-gnu- \
+export KBUILD_COMPILER_STRING=$($CLANG_DIR --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')
+
+make CC=$CLANG_DIR CLANG_TRIPLE=aarch64-linux-gnu- \
      CROSS_COMPILE=~/gcc-7.4.1/bin/aarch64-linux-gnu- \
      TARGET_PRODUCT=atoll -j4 Image.gz
