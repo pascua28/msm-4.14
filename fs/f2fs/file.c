@@ -59,8 +59,6 @@ static int f2fs_vm_page_mkwrite(struct vm_fault *vmf)
 
 	f2fs_bug_on(sbi, f2fs_has_inline_data(inode));
 
-	f2fs_balance_fs(sbi, true);
-
 	file_update_time(vmf->vma->vm_file);
 	down_read(&F2FS_I(inode)->i_mmap_sem);
 	lock_page(page);
@@ -113,6 +111,8 @@ static int f2fs_vm_page_mkwrite(struct vm_fault *vmf)
 	trace_f2fs_vm_page_mkwrite(page, DATA);
 out_sem:
 	up_read(&F2FS_I(inode)->i_mmap_sem);
+
+	f2fs_balance_fs(sbi, dn.node_changed);
 
 	sb_end_pagefault(inode->i_sb);
 err:
@@ -2170,9 +2170,9 @@ static int f2fs_ioc_gc_range(struct file *filp, unsigned long arg)
 		return -EROFS;
 
 	end = range.start + range.len;
-	if (end < range.start || range.start < MAIN_BLKADDR(sbi) ||
-					end >= MAX_BLKADDR(sbi))
+	if (range.start < MAIN_BLKADDR(sbi) || end >= MAX_BLKADDR(sbi)) {
 		return -EINVAL;
+	}
 
 	ret = mnt_want_write_file(filp);
 	if (ret)
