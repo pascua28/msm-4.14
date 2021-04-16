@@ -924,9 +924,6 @@ int f2fs_register_sysfs(struct f2fs_sb_info *sbi)
 		proc_create_data("dc_enable", S_IRUGO | S_IWUGO, sbi->s_proc,
 				 &f2fs_odiscard_enable_fops, sb);
 #endif
-#ifdef CONFIG_F2FS_BD_STAT
-		f2fs_build_bd_stat(sbi);
-#endif
 	}
 	return 0;
 }
@@ -934,9 +931,6 @@ int f2fs_register_sysfs(struct f2fs_sb_info *sbi)
 void f2fs_unregister_sysfs(struct f2fs_sb_info *sbi)
 {
 	if (sbi->s_proc) {
-#ifdef CONFIG_F2FS_BD_STAT
-		f2fs_destroy_bd_stat(sbi);
-#endif
 		remove_proc_entry("iostat_info", sbi->s_proc);
 		remove_proc_entry("segment_info", sbi->s_proc);
 		remove_proc_entry("segment_bits", sbi->s_proc);

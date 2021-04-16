@@ -303,9 +303,6 @@ struct discard_cmd {
 	int error;			/* bio error */
 	spinlock_t lock;		/* for state/bio_ref updating */
 	unsigned short bio_ref;		/* bio reference count */
-#ifdef CONFIG_F2FS_BD_STAT
-	u64 discard_time;
-#endif
 };
 
 enum {
@@ -1328,10 +1325,6 @@ struct f2fs_sb_info {
 	unsigned int ndirty_inode[NR_INODE_TYPE];	/* # of dirty inodes */
 #endif
 	spinlock_t stat_lock;			/* lock for stat operations */
-#ifdef CONFIG_F2FS_BD_STAT
-	spinlock_t bd_lock;
-	struct f2fs_bigdata_info *bd_info;	/* big data collections */
-#endif
 
 	/* For app/fs IO statistics */
 	spinlock_t iostat_lock;
@@ -3445,12 +3438,6 @@ static inline int f2fs_build_stats(struct f2fs_sb_info *sbi) { return 0; }
 static inline void f2fs_destroy_stats(struct f2fs_sb_info *sbi) { }
 static inline void __init f2fs_create_root_stats(void) { }
 static inline void f2fs_destroy_root_stats(void) { }
-#endif
-
-#ifdef CONFIG_F2FS_BD_STAT
-#include "of2fs_bigdata.h"
-void f2fs_build_bd_stat(struct f2fs_sb_info *sbi);
-void f2fs_destroy_bd_stat(struct f2fs_sb_info *sbi);
 #endif
 
 extern const struct file_operations f2fs_dir_operations;

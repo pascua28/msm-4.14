@@ -671,9 +671,6 @@ static int gc_node_segment(struct f2fs_sb_info *sbi,
 	int phase = 0;
 	int submitted = 0;
 	bool fggc = (gc_type == FG_GC);
-#ifdef CONFIG_F2FS_BD_STAT
-	int gc_blks = 0;
-#endif
 
 	start_addr = START_BLOCK(sbi, segno);
 
@@ -690,17 +687,8 @@ next_step:
 		int err;
 
 		/* stop BG_GC if there is not enough free sections. */
-#ifdef CONFIG_F2FS_BD_STAT
-		if (gc_type == BG_GC && has_not_enough_free_secs(sbi, 0, 0)) {
-			bd_lock(sbi);
-			bd_inc_array_val(sbi, gc_node_blocks, gc_type, gc_blks);
-			bd_unlock(sbi);
-			return submitted;
-		}
-#else
 		if (gc_type == BG_GC && has_not_enough_free_secs(sbi, 0, 0))
 			return submitted;
-#endif
 		if (check_valid_map(sbi, segno, off) == 0)
 			continue;
 
@@ -739,10 +727,6 @@ next_step:
 		err = f2fs_move_node_page(node_page, gc_type);
 		if (!err && gc_type == FG_GC)
 			submitted++;
-#ifdef CONFIG_F2FS_BD_STAT
-		if (!err)
-			gc_blks++;
-#endif
 		stat_inc_node_blk_count(sbi, 1, gc_type);
 	}
 
@@ -1154,9 +1138,6 @@ static int gc_data_segment(struct f2fs_sb_info *sbi, struct f2fs_summary *sum,
 	int off;
 	int phase = 0;
 	int submitted = 0;
-#ifdef CONFIG_F2FS_BD_STAT
-	int gc_blks = 0;
-#endif
 
 	start_addr = START_BLOCK(sbi, segno);
 
@@ -1172,18 +1153,8 @@ next_step:
 		nid_t nid = le32_to_cpu(entry->nid);
 
 		/* stop BG_GC if there is not enough free sections. */
-#ifdef CONFIG_F2FS_BD_STAT
-		if (gc_type == BG_GC && has_not_enough_free_secs(sbi, 0, 0)) {
-			bd_lock(sbi);
-			bd_inc_array_val(sbi, gc_data_blocks, gc_type, gc_blks);
-			bd_inc_array_val(sbi, hotcold_count, HC_GC_COLD_DATA, gc_blks);
-			bd_unlock(sbi);
-			return submitted;
-		}
-#else
 		if (gc_type == BG_GC && has_not_enough_free_secs(sbi, 0, 0))
 			return submitted;
-#endif
 
 		if (check_valid_map(sbi, segno, off) == 0)
 			continue;
@@ -1290,23 +1261,12 @@ next_step:
 				up_write(&fi->i_gc_rwsem[READ]);
 			}
 
-#ifdef CONFIG_F2FS_BD_STAT
-			if (!err)
-				gc_blks++;
-#endif
 			stat_inc_data_blk_count(sbi, 1, gc_type);
 		}
 	}
 
 	if (++phase < 5)
 		goto next_step;
-
-#ifdef CONFIG_F2FS_BG_STAT
-	bd_lock(sbi);
-	bd_inc_array_val(sbi, gc_data_blocks, gc_type, gc_blks);
-	bd_inc_array_val(sbi, hotcold_count, HC_GC_COLD_DATA, gc_blks);
-	bd_unlock(sbi);
-#endif
 
 	return submitted;
 }
@@ -1337,9 +1297,6 @@ static int do_garbage_collect(struct f2fs_sb_info *sbi,
 	unsigned char type = IS_DATASEG(get_seg_entry(sbi, segno)->type) ?
 						SUM_TYPE_DATA : SUM_TYPE_NODE;
 	int submitted = 0;
-#ifdef CONFIG_F2FS_BD_STAT
-	int hc_type = get_seg_entry(sbi, segno)->type;
-#endif
 
 	if (__is_large_section(sbi))
 		end_segno = rounddown(end_segno, sbi->segs_per_sec);
@@ -1414,19 +1371,6 @@ freed:
 				get_valid_blocks(sbi, segno, false) == 0)
 			seg_freed++;
 		migrated++;
-#ifdef CONFIG_F2FS_BD_STAT
-		bd_lock(sbi);
-		if (gc_type == BG_GC || get_valid_blocks(sbi, segno, 1) == 0) {
-			if (type == SUM_TYPE_NODE)
-				bd_inc_array_val(sbi, gc_node_segments, gc_type, 1);
-			else
-				bd_inc_array_val(sbi, gc_data_segments, gc_type, 1);
-			bd_inc_array_val(sbi, hotcold_gc_segments, hc_type + 1, 1);
-		}
-		bd_inc_array_val(sbi, hotcold_gc_blocks, hc_type + 1,
-					(unsigned long)get_valid_blocks(sbi, segno, 1));
-		bd_unlock(sbi);
-#endif
 
 		if (__is_large_section(sbi) && segno + 1 < end_segno)
 			sbi->next_victim_seg[gc_type] = segno + 1;
@@ -1460,11 +1404,6 @@ int f2fs_gc(struct f2fs_sb_info *sbi, bool sync,
 	unsigned long long last_skipped = sbi->skipped_atomic_files[FG_GC];
 	unsigned long long first_skipped;
 	unsigned int skipped_round = 0, round = 0;
-#ifdef CONFIG_F2FS_BD_STAT
-	bool gc_completed = false;
-	u64 fggc_begin, fggc_end;
-	fggc_begin = local_clock();
-#endif
 
 	trace_f2fs_gc_begin(sbi->sb, sync, background,
 				get_pages(sbi, F2FS_DIRTY_NODES),
@@ -1518,9 +1457,6 @@ gc_more:
 	if (gc_type == FG_GC && seg_freed == sbi->segs_per_sec)
 		sec_freed++;
 	total_freed += seg_freed;
-#ifdef CONFIG_F2FS_BD_STAT
-	gc_completed = true;
-#endif
 
 	if (gc_type == FG_GC) {
 		if (sbi->skipped_atomic_files[FG_GC] > last_skipped ||
@@ -1567,18 +1503,6 @@ stop:
 				prefree_segments(sbi));
 
 	mutex_unlock(&sbi->gc_mutex);
-#ifdef CONFIG_F2FS_BD_STAT
-	if (gc_completed) {
-		fggc_end = gc_type == FG_GC ? local_clock() : 0;
-		bd_lock(sbi);
-		if (fggc_end)
-			bd_inc_val(sbi, fggc_time, fggc_end - fggc_begin);
-		bd_inc_array_val(sbi, gc_count, gc_type, 1);
-		if (ret)
-			bd_inc_array_val(sbi, gc_fail_count, gc_type, 1);
-		bd_unlock(sbi);
-	}
-#endif
 
 	put_gc_inode(&gc_list);
 

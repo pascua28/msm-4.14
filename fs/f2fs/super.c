@@ -2585,11 +2585,6 @@ static inline bool sanity_check_area_boundary(struct f2fs_sb_info *sbi,
 		} else {
 			err = __f2fs_commit_super(bh, NULL);
 			res = err ? "failed" : "done";
-#ifdef CONFIG_F2FS_BD_STAT
-			bd_lock(sbi);
-			bd_inc_array_val(sbi, hotcold_count, HC_META_SB, 1);
-			bd_unlock(sbi);
-#endif
 		}
 		f2fs_msg(sb, KERN_INFO,
 			"Fix alignment : %s, start(%u) end(%u) block(%u)",
@@ -3113,11 +3108,6 @@ int f2fs_commit_super(struct f2fs_sb_info *sbi, bool recover)
 	if (!bh)
 		return -EIO;
 	err = __f2fs_commit_super(bh, F2FS_RAW_SUPER(sbi));
-#ifdef CONFIG_F2FS_BD_STAT
-	bd_lock(sbi);
-	bd_inc_array_val(sbi, hotcold_count, HC_META_SB, 1);
-	bd_unlock(sbi);
-#endif
 	brelse(bh);
 
 	/* if we are in recovery path, skip writing valid superblock */
@@ -3129,11 +3119,6 @@ int f2fs_commit_super(struct f2fs_sb_info *sbi, bool recover)
 	if (!bh)
 		return -EIO;
 	err = __f2fs_commit_super(bh, F2FS_RAW_SUPER(sbi));
-#ifdef CONFIG_F2FS_BD_STAT
-	bd_lock(sbi);
-	bd_inc_array_val(sbi, hotcold_count, HC_META_SB, 1);
-	bd_unlock(sbi);
-#endif
 
 	brelse(bh);
 	return err;
@@ -3271,16 +3256,6 @@ try_onemore:
 	sbi = kzalloc(sizeof(struct f2fs_sb_info), GFP_KERNEL);
 	if (!sbi)
 		return -ENOMEM;
-#ifdef CONFIG_F2FS_BD_STAT
-	sbi->bd_info = kzalloc(sizeof(struct f2fs_bigdata_info), GFP_KERNEL);
-	if (!sbi->bd_info) {
-		err = -ENOMEM;
-		goto free_sbi;
-	}
-	sbi->bd_info->ssr_last_jiffies = jiffies;
-	bd_lock_init(sbi);
-#endif
-
 
 	sbi->sb = sb;
 

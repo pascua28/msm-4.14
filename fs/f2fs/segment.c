@@ -527,56 +527,6 @@ int f2fs_commit_inmem_pages(struct inode *inode)
 #define DEF_DIRTY_STAT_INTERVAL 15 /* 15 secs */
 static inline bool of2fs_need_balance_dirty(struct f2fs_sb_info *sbi)
 {
-#ifdef CONFIG_F2FS_BD_STAT
-	struct dirty_seglist_info *dirty_i = DIRTY_I(sbi);
-	struct timespec ts = {DEF_DIRTY_STAT_INTERVAL, 0};
-	unsigned long interval = timespec_to_jiffies(&ts);
-	struct f2fs_bigdata_info *bd = F2FS_BD_STAT(sbi);
-	unsigned long last_jiffies;
-	int dirty_node = 0, dirty_data = 0, all_dirty;
-	long node_cnt, data_cnt;
-	int i;
-
-	last_jiffies = bd->ssr_last_jiffies;
-
-	if (time_before(jiffies, last_jiffies + interval))
-		return false;
-
-	for (i = CURSEG_HOT_DATA; i <= CURSEG_COLD_DATA; i++)
-		dirty_data += dirty_i->nr_dirty[i];
-	for (i = CURSEG_HOT_NODE; i <= CURSEG_COLD_NODE; i++)
-		dirty_node += dirty_i->nr_dirty[i];
-	all_dirty = dirty_data + dirty_node;
-	if (!all_dirty)
-		return false;
-
-	/* how many blocks are consumed during this interval */
-	bd_lock(sbi);
-	node_cnt = (long)(bd->curr_node_alloc_count - bd->last_node_alloc_count);
-	data_cnt = (long)(bd->curr_data_alloc_count - bd->last_data_alloc_count);
-
-	bd->last_node_alloc_count = bd->curr_node_alloc_count;
-	bd->last_data_alloc_count = bd->curr_data_alloc_count;
-	bd->ssr_last_jiffies = jiffies;
-	bd_unlock(sbi);
-
-
-	if (dirty_data < reserved_sections(sbi) &&
-		data_cnt > (long)sbi->blocks_per_seg) {
-		int randnum = prandom_u32_max(100);
-		int ratio = dirty_data * 100 / all_dirty;
-		if (randnum > ratio)
-			return true;
-	}
-
-	if (dirty_node < reserved_sections(sbi) &&
-		node_cnt > (long)sbi->blocks_per_seg) {
-		int randnum = prandom_u32_max(100);
-		int ratio = dirty_node * 100 / all_dirty;
-		if (randnum > ratio)
-			return true;
-	}
-#endif
 	return false;
 }
 
@@ -1078,9 +1028,6 @@ static struct discard_cmd *__create_discard_cmd(struct f2fs_sb_info *sbi,
 	dc->state = D_PREP;
 	dc->queued = 0;
 	dc->error = 0;
-#ifdef CONFIG_F2FS_BD_STAT
-	dc->discard_time = 0;
-#endif
 	init_completion(&dc->wait);
 	list_add_tail(&dc->list, pend_list);
 	spin_lock_init(&dc->lock);
@@ -1146,16 +1093,6 @@ static void __remove_discard_cmd(struct f2fs_sb_info *sbi,
 	spin_unlock_irqrestore(&dc->lock, flags);
 
 	f2fs_bug_on(sbi, dc->ref);
-#ifdef CONFIG_F2FS_BD_STAT
-	if (dc->state == D_DONE && !dc->error && dc->discard_time) {
-		bd_lock(sbi);
-		bd_inc_val(sbi, discard_blocks, dc->len);
-		bd_inc_val(sbi, discard_count, 1);
-		bd_inc_val(sbi, discard_time, dc->discard_time);
-		bd_max_val(sbi, max_discard_time, dc->discard_time);
-		bd_unlock(sbi);
-	}
-#endif
 
 	if (dc->error == -EOPNOTSUPP)
 		dc->error = 0;
@@ -1178,15 +1115,6 @@ static void f2fs_submit_discard_endio(struct bio *bio)
 	dc->bio_ref--;
 	if (!dc->bio_ref && dc->state == D_SUBMIT) {
 		dc->state = D_DONE;
-#ifdef CONFIG_F2FS_BD_STAT
-		if (dc->discard_time) {
-			u64 discard_end_time = (u64)ktime_get();
-			if (discard_end_time > dc->discard_time)
-				dc->discard_time = discard_end_time - dc->discard_time;
-			else
-				dc->discard_time = 0;
-		}
-#endif
 		complete_all(&dc->wait);
 	}
 	spin_unlock_irqrestore(&dc->lock, flags);
@@ -1337,10 +1265,6 @@ submit:
 		 * right away
 		 */
 		spin_lock_irqsave(&dc->lock, flags);
-#ifdef CONFIG_F2FS_BD_STAT
-		if (dc->state == D_PREP)
-			dc->discard_time = (u64)ktime_get();
-#endif
 		if (last)
 			dc->state = D_SUBMIT;
 		else
@@ -3370,18 +3294,6 @@ void f2fs_allocate_data_block(struct f2fs_sb_info *sbi, struct page *page,
 	__refresh_next_blkoff(sbi, curseg);
 
 	stat_inc_block_count(sbi, curseg);
-#ifdef CONFIG_F2FS_BD_STAT
-	bd_lock(sbi);
-	if (type >= CURSEG_HOT_DATA && type <= CURSEG_COLD_DATA) {
-		bd_inc_array_val(sbi, data_alloc_count, curseg->alloc_type, 1);
-		bd_inc_val(sbi, curr_data_alloc_count, 1);
-	} else if (type >= CURSEG_HOT_NODE && type <= CURSEG_COLD_NODE) {
-		bd_inc_array_val(sbi, node_alloc_count, curseg->alloc_type, 1);
-		bd_inc_val(sbi, curr_node_alloc_count, 1);
-	}
-	bd_inc_array_val(sbi, hotcold_count, type + 1, 1UL);
-	bd_unlock(sbi);
-#endif
 
 	/*
 	 * SIT information should be updated before segment allocation,
@@ -3500,19 +3412,6 @@ void f2fs_do_write_meta_page(struct f2fs_sb_info *sbi, struct page *page,
 
 	stat_inc_meta_count(sbi, page->index);
 	f2fs_update_iostat(sbi, io_type, F2FS_BLKSIZE);
-#ifdef CONFIG_F2FS_BD_STAT
-	bd_lock(sbi);
-	if (fio.new_blkaddr >= le32_to_cpu(F2FS_RAW_SUPER(sbi)->cp_blkaddr) &&
-	    (fio.new_blkaddr < le32_to_cpu(F2FS_RAW_SUPER(sbi)->sit_blkaddr)))
-		bd_inc_array_val(sbi, hotcold_count, HC_META_CP, 1);
-	else if (fio.new_blkaddr < le32_to_cpu(F2FS_RAW_SUPER(sbi)->nat_blkaddr))
-		bd_inc_array_val(sbi, hotcold_count, HC_META_SIT, 1);
-	else if (fio.new_blkaddr < le32_to_cpu(F2FS_RAW_SUPER(sbi)->ssa_blkaddr))
-		bd_inc_array_val(sbi, hotcold_count, HC_META_NAT, 1);
-	else if (fio.new_blkaddr < le32_to_cpu(F2FS_RAW_SUPER(sbi)->main_blkaddr))
-		bd_inc_array_val(sbi, hotcold_count, HC_META_SSA, 1);
-	bd_unlock(sbi);
-#endif
 }
 
 void f2fs_do_write_node_page(unsigned int nid, struct f2fs_io_info *fio)
@@ -3552,11 +3451,6 @@ int f2fs_inplace_write_data(struct f2fs_io_info *fio)
 			GET_SEGNO(sbi, fio->new_blkaddr))->type));
 
 	stat_inc_inplace_blocks(fio->sbi);
-#ifdef CONFIG_F2FS_BD_STAT
-	bd_lock(sbi);
-	bd_inc_val(sbi, data_ipu_count, 1);
-	bd_unlock(sbi);
-#endif
 
 	err = f2fs_submit_page_bio(fio);
 	if (!err) {
@@ -4867,9 +4761,6 @@ static struct discard_cmd *__create_discard_cmd_oppo(struct f2fs_sb_info *sbi,
 	dc->state = D_PREP;
 	dc->queued = 0;
 	dc->error = 0;
-#ifdef CONFIG_F2FS_BD_STAT
-	dc->discard_time = 0;
-#endif
 	init_completion(&dc->wait);
 	list_add_tail(&dc->list, pend_list);
 	spin_lock_init(&dc->lock);
