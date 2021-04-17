@@ -263,7 +263,7 @@ int irq_startup(struct irq_desc *desc, bool resend, bool force)
 		case IRQ_STARTUP_NORMAL:
 			ret = __irq_startup(desc);
 			if (irqd_has_set(&desc->irq_data, IRQD_PERF_CRITICAL))
-				setup_perf_irq_locked(desc, desc->action->flags);
+				setup_perf_irq_locked(desc);
 			else
 				irq_setup_affinity(desc);
 			break;
