@@ -27,7 +27,6 @@
 struct irq_desc_list {
 	struct list_head list;
 	struct irq_desc *desc;
-	unsigned int perf_flag;
 };
 
 static LIST_HEAD(perf_crit_irqs);
@@ -1144,13 +1143,12 @@ setup_irq_thread(struct irqaction *new, unsigned int irq, bool secondary)
 	return 0;
 }
 
-static void add_desc_to_perf_list(struct irq_desc *desc, unsigned int perf_flag)
+static void add_desc_to_perf_list(struct irq_desc *desc)
 {
 	struct irq_desc_list *item;
 
 	item = kmalloc(sizeof(*item), GFP_ATOMIC | __GFP_NOFAIL);
 	item->desc = desc;
-	item->perf_flag = perf_flag;
 
 	raw_spin_lock(&perf_irqs_lock);
 	list_add(&item->list, &perf_crit_irqs);
@@ -1175,18 +1173,11 @@ static void unaffine_one_perf_thread(struct irqaction *action)
 	set_cpus_allowed_ptr(action->thread, cpu_all_mask);
 }
 
-static void affine_one_perf_irq(struct irq_desc *desc, unsigned int perf_flag)
+static void affine_one_perf_irq(struct irq_desc *desc)
 {
-	const struct cpumask *mask;
-	int *mask_index;
 	int cpu;
 
-	if (perf_flag & IRQF_PERF_AFFINE) {
-		mask = cpu_perf_mask;
-		mask_index = &perf_cpu_index;
-	}
-
-	if (!cpumask_intersects(mask, cpu_online_mask)) {
+	if (!cpumask_intersects(cpu_perf_mask, cpu_online_mask)) {
 		WARN(1, "requested perf CPU is offline for %s\n", desc->name);
 		irq_set_affinity_locked(&desc->irq_data, cpu_online_mask, true);
 		return;
@@ -1194,25 +1185,25 @@ static void affine_one_perf_irq(struct irq_desc *desc, unsigned int perf_flag)
 
 	/* Balance the performance-critical IRQs across the given CPUs */
 	while (1) {
-		cpu = cpumask_next_and(*mask_index, mask, cpu_online_mask);
+		cpu = cpumask_next_and(perf_cpu_index, cpu_perf_mask, cpu_online_mask);
 		if (cpu < nr_cpu_ids)
 			break;
-		*mask_index = -1;
+		perf_cpu_index = -1;
 	}
 	irq_set_affinity_locked(&desc->irq_data, cpumask_of(cpu), true);
 
-	*mask_index = cpu;
+	perf_cpu_index = cpu;
 }
 
-void setup_perf_irq_locked(struct irq_desc *desc, unsigned int perf_flag)
+void setup_perf_irq_locked(struct irq_desc *desc)
 {
-	add_desc_to_perf_list(desc, perf_flag);
+	add_desc_to_perf_list(desc);
 	raw_spin_lock(&perf_irqs_lock);
-	affine_one_perf_irq(desc, perf_flag);
+	affine_one_perf_irq(desc);
 	raw_spin_unlock(&perf_irqs_lock);
 }
 
-void irq_set_perf_affinity(unsigned int irq, unsigned int perf_flag)
+void irq_set_perf_affinity(unsigned int irq)
 {
 	struct irq_desc *desc = irq_to_desc(irq);
 	unsigned long flags;
@@ -1222,9 +1213,9 @@ void irq_set_perf_affinity(unsigned int irq, unsigned int perf_flag)
 
 	raw_spin_lock_irqsave(&desc->lock, flags);
 	if (desc->action) {
-		desc->action->flags |= perf_flag;
+		desc->action->flags |= IRQF_PERF_AFFINE;
 		irqd_set(&desc->irq_data, IRQD_PERF_CRITICAL);
-		setup_perf_irq_locked(desc, perf_flag);
+		setup_perf_irq_locked(desc);
 	} else {
 		WARN(1, "perf affine: action not set for IRQ%d\n", irq);
 	}
@@ -1263,7 +1254,7 @@ void reaffine_perf_irqs(bool from_hotplug)
 			struct irq_desc *desc = data->desc;
 
 			raw_spin_lock(&desc->lock);
-			affine_one_perf_irq(desc, data->perf_flag);
+			affine_one_perf_irq(desc);
 			affine_one_perf_thread(desc->action);
 			raw_spin_unlock(&desc->lock);
 		}
