@@ -1583,7 +1583,7 @@ static int cam_ife_csid_disable_csi2(
 		csid_hw->hw_intf->hw_idx, csid_hw->csi2_cfg_cnt, res->res_id);
 
 	if (cid_data->init_cnt)
-		 cid_data->init_cnt--;
+		cid_data->init_cnt--;
 	if (!cid_data->init_cnt)
 		res->res_state = CAM_ISP_RESOURCE_STATE_RESERVED;
 
@@ -1592,7 +1592,6 @@ static int cam_ife_csid_disable_csi2(
 
 	CAM_DBG(CAM_ISP, "res_id %d res_state=%d",
 		res->res_id, res->res_state);
-
 	if (csid_hw->csi2_cfg_cnt)
 		return 0;
 
