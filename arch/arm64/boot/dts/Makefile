@@ -15,7 +15,6 @@
 # dts-dirs += marvell
 # dts-dirs += mediatek
 # dts-dirs += nvidia
-# dts-dirs += qcom
 # dts-dirs += realtek
 # dts-dirs += renesas
 # dts-dirs += rockchip
@@ -26,13 +25,8 @@
 # dts-dirs += zte
 # dts-dirs += 19031
 # dts-dirs += 19111
-#shentaotao@ODM_LQ@BSP.Bringup,2020/05/02,modified for dts folder build -start
-ifeq ($(CONFIG_MSM_206B1),y)
-dts-dirs += 206B1
-else
-dts-dirs += 19721
-endif
-#shentaotao@ODM_LQ@BSP.Bringup,2020/05/02,modified for dts folder build -end
+
+dts-dirs += qcom
 
 subdir-y	:= $(dts-dirs)
 

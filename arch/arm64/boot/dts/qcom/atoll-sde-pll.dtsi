@@ -27,8 +27,11 @@
 		clock-rate = <0>;
 		memory-region = <&dfps_data_memory>;
 		gdsc-supply = <&mdss_core_gdsc>;
-		qcom,dsi-pll-ssc-en;
-		qcom,dsi-pll-ssc-mode = "down-spread";
+		/*#ifndef ODM_LQ_EDIT*/
+		/*zhangjialong@ODM_LQ@Multimedia.Dispaly,2019/11/20,modified for close ssc*/
+		//qcom,dsi-pll-ssc-en;
+		//qcom,dsi-pll-ssc-mode = "down-spread";
+		/*#endif*/
 		qcom,platform-supply-entries {
 			#address-cells = <1>;
 			#size-cells = <0>;

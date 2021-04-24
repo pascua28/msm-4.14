@@ -336,8 +336,8 @@
 		compatible = "qcom,stub-regulator";
 		regulator-name = "pm6150l_l11";
 		qcom,hpm-min-load = <10000>;
-		regulator-min-microvolt = <3000000>;
-		regulator-max-microvolt = <3400000>;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
 	};
 
 	BOB: pm6150l_bob: regulator-pm6150l-bob {

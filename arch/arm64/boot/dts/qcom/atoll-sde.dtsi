@@ -142,6 +142,7 @@
 		qcom,sde-pipe-order-version = <0x1>;
 		qcom,sde-has-dim-layer;
 		qcom,sde-has-idle-pc;
+		//qcom,sde-mixer-stage-base-layer;
 
 		qcom,sde-max-bw-low-kbps = <3900000>;
 		qcom,sde-max-bw-high-kbps = <5500000>;
@@ -180,9 +181,6 @@
 		qcom,sde-qos-lut-cwb = <0 0x66666541 0x00000000>;
 
 		qcom,sde-cdp-setting = <1 1>, <1 0>;
-
-		qcom,sde-qos-cpu-mask = <0x3>;
-		qcom,sde-qos-cpu-dma-latency = <300>;
 
 		/* offsets are relative to "mdp_phys + qcom,sde-off */
 
@@ -504,7 +502,12 @@
 	};
 
 	sde_dp: qcom,dp_display@ae90000 {
-		status = "ok";
+//#ifndef ODM_LQ_EDIT
+/*Hongbin.Chen@ODM_LQ.BSP.CHG 2019-11-25 close usb 3.0 */
+//		status = "ok";
+//#else
+		status = "disabled";
+//#endif
 		cell-index = <0>;
 		compatible = "qcom,dp-display";
 

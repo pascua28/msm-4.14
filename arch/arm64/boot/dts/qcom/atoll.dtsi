@@ -503,7 +503,12 @@
 					compatible = "android,vendor";
 					dev = "/dev/block/platform/soc/1d84000.ufshc/by-name/vendor";
 					type = "ext4";
-					mnt_flags = "ro,barrier=1,discard";
+/*#if defined(VENDOR_EDIT) && defined(CONFIG_EXT4_ASYNC_DISCARD_SUPPORT)*/
+/*yh@PSW.BSP.Storage.EXT4, 2018-11-26 add for ext4 async discard suppot*/
+					mnt_flags = "ro,barrier=1,async_discard";
+/*#else*/
+					/*mnt_flags = "ro,barrier=1,discard";*/
+/*#endif*/
 			/*#ifndef ODM_LQ_EDIT*/
 			/*Hongbin.Chen@ODM_LQ@BSP.Partition,2019/10/12,modified for update partition*/
 			/*		fsmgr_flags = "wait,slotselect,avb";*/
@@ -548,13 +553,13 @@
 		removed_region: removed_region@80b00000 {
 			compatible = "removed-dma-pool";
 			no-map;
-			reg = <0 0x80b00000 0 0x3900000>;
-		};
-
-		pil_modem_mem: modem_region@86000000 {
-			compatible = "removed-dma-pool";
-			no-map;
-			reg = <0 0x86000000 0 0x8400000>;
+// #ifdef VENDOR_EDIT
+// #Rui.Tuo@BSP.Fingerprint.Basic, 2019/11/21, Add for enlarge memory of TZ app to 60M
+// #Rui.Tuo@BSP.Fingerprint.Basic, 2020/05/29, Add for enlarge memory of TZ app to 80M
+			reg = <0 0x80b00000 0 0x6700000>;
+//#else			
+//			reg = <0 0x80b00000 0 0x3900000>;
+//#endif
 		};
 
 		pil_camera_mem: camera_region@8e400000 {
@@ -611,6 +616,13 @@
 			reg = <0 0x93b15000 0 0x2000>;
 		};
 
+// #Rui.Tuo@BSP.Fingerprint.Basic, 2020/05/29, Add for enlarge memory of TZ app to 80M
+        pil_modem_mem: modem_region@93c00000  {
+                compatible = "removed-dma-pool";
+                no-map;
+                reg = <0 0x93c00000  0 0x8400000>;
+        };
+
 		qseecom_mem: qseecom_region@9e000000 {
 			compatible = "shared-dma-pool";
 			no-map;
@@ -628,7 +640,12 @@
 		cdsp_sec_mem: cdsp_sec_regions@0x9f400000 {
 			compatible = "removed-dma-pool";
 			no-map;
-			reg = <0 0x9f400000 0 0x1e00000>;
+// #ifdef VENDOR_EDIT
+// #Rui.Tuo@BSP.Fingerprint.Basic, 2019/11/25,reduce cdsp_sec_mem from 30M to 12M
+			reg = <0 0x9f400000 0 0xc00000>;
+//#else
+//                        reg = <0 0x9f400000 0 0x1e00000>;
+// #endif
 		};
 
 		secure_display_memory: secure_display_region {
@@ -636,7 +653,12 @@
 			alloc-ranges = <0 0x00000000 0 0xffffffff>;
 			reusable;
 			alignment = <0 0x400000>;
-			size = <0 0x8c00000>;
+// #ifdef VENDOR_EDIT
+// #Jae.Tseng@BSP.MEMORY, 2019/12/26,reduce secure_display_memory from 140M to 100M
+			size = <0 0x6400000>;
+//#else
+//			size = <0 0x8c00000>;
+// #endif
 		};
 
 		cont_splash_memory: cont_splash_region@9c000000 {
@@ -668,6 +690,20 @@
 			size = <0 0x2400000>;
 		};
 
+		// #ifdef VENDOR_EDIT
+		// #zhangzongyu@BSP.kernel.stability, 2020/05/15, Add for dump device info
+		// #endif
+		ramoops: ramoops@0xBA400000 {
+			compatible = "ramoops";
+			reg = <0 0xBA400000 0 0x00400000>;
+			record-size =  <0x40000>; //256x1024
+			console-size = <0x40000>;
+			ftrace-size =  <0x40000>;
+			pmsg-size=         <0x200000>;
+			devinfo-size=  <0x01000>;
+			ecc-size=          <0x0>;
+		};
+
 		/* global autoconfigured region for contiguous allocations */
 		linux,cma {
 			compatible = "shared-dma-pool";
@@ -680,7 +716,7 @@
 	};
 
 	chosen {
-		bootargs = "rcupdate.rcu_expedited=1 rcu_nocbs=0-7";
+		bootargs = "rcu_nocbs=0-7";
 	};
 
 	soc: soc { };
@@ -1249,7 +1285,13 @@
 
 	qcom_seecom: qseecom@82200000 {
 		compatible = "qcom,qseecom";
-		reg = <0x82200000 0x2200000>;
+// #ifdef VENDOR_EDIT
+// #Rui.Tuo@BSP.Fingerprint.Basic, 2019/11/21, Add for enlarge memory of TZ app to 60M
+// #Rui.Tuo@BSP.Fingerprint.Basic, 2020/05/29, Add for enlarge memory of TZ app to 80M
+        reg = <0x82200000 0x5000000>;
+//#else	
+//		reg = <0x82200000 0x2200000>;
+//#endif
 		reg-names = "secapp-region";
 		memory-region = <&qseecom_mem>;
 		qcom,hlos-num-ce-hw-instances = <1>;
@@ -1266,7 +1308,13 @@
 
 	qcom_smcinvoke: smcinvoke@82200000 {
 		compatible = "qcom,smcinvoke";
-		reg = <0x82200000 0x2200000>;
+// #ifdef VENDOR_EDIT
+// #Rui.Tuo@BSP.Fingerprint.Basic, 2019/11/21, Add for enlarge memory of TZ app to 60M
+// #Rui.Tuo@BSP.Fingerprint.Basic, 2020/05/29, Add for enlarge memory of TZ app to 80M
+        reg = <0x82200000 0x5000000>;
+//#else	
+//		reg = <0x82200000 0x2200000>;
+//#endif
 		reg-names = "secapp-region";
 	};
 
@@ -1434,7 +1482,11 @@
 		reg-names = "wdt-base";
 		interrupts = <GIC_SPI 0 IRQ_TYPE_NONE>,
 				<GIC_SPI 1 IRQ_TYPE_NONE>;
-		qcom,bark-time = <11000>;
+		//#ifdef VENDOR_EDIT //yixue.ge modify bark time to 20s
+		//qcom,bark-time = <11000>;
+		//#else
+		qcom,bark-time = <20000>;
+		//#endif
 		qcom,pet-time = <9360>;
 		qcom,ipi-ping;
 		qcom,wakeup-enable;
@@ -1652,6 +1704,7 @@
 		qcom,adsp-remoteheap-vmid = <22 37>;
 		qcom,fastrpc-adsp-audio-pdr;
 		qcom,fastrpc-adsp-sensors-pdr;
+		qcom,qos-cores = <0 1 2 3 4 5>;
 
 		qcom,msm_fastrpc_compute_cb1 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
@@ -3643,7 +3696,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			qcom,speed-bin = <174>;
+			qcom,speed-bin = <172>;
 
 			qcom,initial-pwrlevel = <6>;
 			qcom,ca-target-pwrlevel = <5>;
@@ -4077,7 +4130,7 @@
 
 &pm6150_vadc {
 	pinctrl-names = "default";
-	pinctrl-0 = <&nvm_therm_default &sdm_skin_therm_default>;
+	pinctrl-0 = <&nvm_therm_default &sdm_skin_therm_default	&charge_therm_default>;
 
 	smb1390_therm {
 		reg = <ADC_AMUX_THM2>;
@@ -4094,6 +4147,9 @@
 		qcom,pre-scaling = <1 1>;
 	};
 
+//#ifdef VENDOR_EDIT
+// Gang.Yan@BSP.CHG.Basic 2020/04/14  for add usbtemp
+/*
 	conn_therm {
 		reg = <ADC_AMUX_THM3_PU2>;
 		label = "conn_therm";
@@ -4101,6 +4157,8 @@
 		qcom,hw-settle-time = <200>;
 		qcom,pre-scaling = <1 1>;
 	};
+*/
+//#endif
 
 	nvm_therm {
 		reg = <ADC_GPIO1_PU2>;
@@ -4117,6 +4175,14 @@
 		qcom,hw-settle-time = <200>;
 		qcom,pre-scaling = <1 1>;
 	};
+
+	charge_therm {
+                reg = <ADC_GPIO3_PU2>;
+                label = "charge_therm";
+                qcom,ratiometric;
+                qcom,hw-settle-time = <200>;
+                qcom,pre-scaling = <1 1>;
+        };
 };
 
 &pm6150_gpios {
@@ -4133,6 +4199,13 @@
 			bias-high-impedance;
 		};
 	};
+
+	charge_therm {
+                charge_therm_default: charge_therm_default {
+                        pins = "gpio9";
+                        bias-high-impedance;
+                };
+        };
 };
 
 &spmi_bus {
@@ -4157,8 +4230,8 @@
 &pm6150_adc_tm {
 	io-channels = <&pm6150_vadc ADC_XO_THERM_PU2>,
 			<&pm6150_vadc ADC_AMUX_THM1_PU2>,
-			<&pm6150_vadc ADC_AMUX_THM3_PU2>,
-			<&pm6150_vadc ADC_GPIO2_PU2>;
+			<&pm6150_vadc ADC_GPIO2_PU2>,
+			<&pm6150_vadc ADC_GPIO3_PU2>;
 
 	/* Channel nodes */
 	xo_therm {
@@ -4173,22 +4246,32 @@
 		qcom,hw-settle-time = <200>;
 	};
 
-	conn_therm {
-		reg = <ADC_AMUX_THM3_PU2>;
-		qcom,ratiometric;
-		qcom,hw-settle-time = <200>;
-	};
+//zengwujun@ODM_LQ@BSP.power remove conn_therm for dt_chan_count match iio_channel_num on 20200509
+//	conn_therm {
+//		reg = <ADC_AMUX_THM3_PU2>;
+//		qcom,ratiometric;
+//		qcom,hw-settle-time = <200>;
+//	};
 
 	sdm_skin_therm {
 		reg = <ADC_GPIO2_PU2>;
 		qcom,ratiometric;
 		qcom,hw-settle-time = <200>;
 	};
+
+	charge_therm {
+                reg = <ADC_GPIO3_PU2>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+	};
 };
 
 &pm6150l_vadc {
-	pinctrl-names = "default";
-	pinctrl-0 = <&camera_flash_therm_default>;
+	/*#ifndef ODM_LQ_EDIT*/
+	/*liujiawei@ODM_LQ.BSP.CHG,2020/07/22, modified for camera-therm */
+	//pinctrl-names = "default";
+	//pinctrl-0 = <&camera_flash_therm_default>;
+	/*endif*/
 
 	quiet_therm {
 		reg = <ADC_AMUX_THM1_PU2>;
@@ -4207,7 +4290,7 @@
 	};
 
 	camera_flash_therm {
-		reg = <ADC_GPIO1_PU2>;
+		reg = <ADC_AMUX_THM3_PU2>; //ADC_GPIO1_PU2
 		label = "camera_flash_therm";
 		qcom,ratiometric;
 		qcom,hw-settle-time = <200>;
@@ -4215,6 +4298,9 @@
 	};
 };
 
+/*#ifndef ODM_LQ_EDIT*/
+/*liujiawei@ODM_LQ.BSP.CHG,2020/07/22, modified for camera-therm */
+/*
 &pm6150l_gpios {
 	camera_flash_therm {
 		camera_flash_therm_default: camera_flash_therm_default {
@@ -4223,11 +4309,13 @@
 		};
 	};
 };
+*/
+/*endif*/
 
 &pm6150l_adc_tm {
 	io-channels = <&pm6150l_vadc ADC_AMUX_THM1_PU2>,
 			<&pm6150l_vadc ADC_AMUX_THM2_PU2>,
-			<&pm6150l_vadc ADC_GPIO1_PU2>;
+			<&pm6150l_vadc ADC_AMUX_THM3_PU2>; //ADC_GPIO1_PU2
 
 	/* Channel nodes */
 	quiet_therm {
@@ -4243,7 +4331,7 @@
 	};
 
 	camera_flash_therm {
-		reg = <ADC_GPIO1_PU2>;
+		reg = <ADC_AMUX_THM3_PU2>; //ADC_GPIO1_PU2
 		qcom,ratiometric;
 		qcom,hw-settle-time = <200>;
 	};
@@ -4256,7 +4344,7 @@
 #include "atoll-sde.dtsi"
 #include "msm-rdbg.dtsi"
 
-&qupv3_se9_i2c {
+&qupv3_se11_i2c {
 	status = "ok";
 	#include "pm8008.dtsi"
 };
@@ -4319,8 +4407,8 @@
 };
 
 &L3P {
-	regulator-min-microvolt = <2800000>;
-	regulator-max-microvolt = <2800000>;
+	regulator-min-microvolt = <2900000>;
+	regulator-max-microvolt = <2900000>;
 	qcom,min-dropout-voltage = <200000>;
 };
 

@@ -19,9 +19,9 @@
 
 /*#ifdef ODM_LQ_EDIT*/
 /*qujiong@ODM_LQ@BSP.touch,2019/10/10,modified for bring up TP*/
-#include "hx83112a-spi-touchscreen.dtsi"
+#include "plato-spi-touchscreen.dtsi"	//zhangchaofan@ODM_LQ@BSP.touch,2019/11/14
 /*zhangchaofan@ODM_LQ@BSP.touch,2019/10/29,add nova dtsifor bring up TP*/
-#include "novatek-nt36672c-spi-tp.dtsi"
+//#include "novatek-nt36672c-spi-tp.dtsi"	//zhangchaofan@ODM_LQ@BSP.touch,2019/11/14
 /*endif ODM_LQ_EDIT*/
 
 / {
@@ -29,7 +29,7 @@
 	compatible = "qcom,atoll-idp", "qcom,atoll", "qcom,idp";
 	qcom,msm-id = <407 0x0>;
 	qcom,board-id = <34 1>;
-	//oppo,project = <19721 19759>;
+	oppo,project = <132785>;
 };
 
 /*#ifndef ODM_LQ_EDIT*/

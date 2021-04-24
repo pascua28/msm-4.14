@@ -522,6 +522,13 @@
 			qcom,init-voltage = <2496000>;
 			qcom,init-mode =
 				<RPMH_REGULATOR_MODE_LPM>;
+			/*#ifdef ODM_LQ_EDIT*/
+			/*wuzhipeng@ODM_LQ@BSP.fingerprint,2019/10/08 for goodix fingerprint*/
+			/*#ifdef MSM_206B1*/
+			/*zhangyang@ODM_LQ@Multimedia.Dispaly,2020/05/11, 206B1 don't need to be always on*/
+			//regulator-always-on;
+			/*#endif MSM_206B1*/
+			/*#endif ODM_LQ_EDIT*/
 		};
 	};
 
@@ -719,7 +726,7 @@
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
 			regulator-min-microvolt = <3000000>;
 			regulator-max-microvolt = <3312000>;
-			qcom,init-voltage = <3000000>;
+			qcom,init-voltage = <3300000>;
 			qcom,init-mode =
 				<RPMH_REGULATOR_MODE_LPM>;
 		};
@@ -801,9 +808,9 @@
 		pm6150l_l11: regulator-pm6150l-l11 {
 			regulator-name = "pm6150l_l11";
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
-			regulator-min-microvolt = <3000000>;
-			regulator-max-microvolt = <3400000>;
-			qcom,init-voltage = <3000000>;
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			qcom,init-voltage = <3300000>;
 			qcom,init-mode =
 				<RPMH_REGULATOR_MODE_LPM>;
 		};

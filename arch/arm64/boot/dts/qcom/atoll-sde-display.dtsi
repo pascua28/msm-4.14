@@ -15,14 +15,21 @@
 #include "dsi-panel-sim-video.dtsi"
 #include "dsi-panel-sim-cmd.dtsi"
 #include "dsi-panel-sim-dsc375-cmd.dtsi"
-#include "dsi-panel-nt36672c-fhd-plus-video.dtsi"
 #include <dt-bindings/clock/mdss-10nm-pll-clk.h>
 /*#ifdef ODM_LQ_EDIT*/
 /*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/03,modified for bring up LCD*/
 #include "dsi-panel-hx83112a-dsbj-fhd-plus-video.dtsi"
 /*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/25,add for bringup C-PHY LCD*/
 #include "dsi-panel-nt36672c-boe-fhd-plus-video.dtsi"
+/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/11/18,add for bringup jdi panel*/
+#include "dsi-panel-nt36672c-jdi-fhd-plus-video.dtsi"
 /*endif ODM_LQ_EDIT*/
+/*#ifdef ODM_TARGET_DEVICE_206B1*/
+/*zhangyang@ODM_LQ@Multimedia.Dispaly,2020/04/29,add for bringup samsung ams643xf01 panel*/
+#include "dsi-panel-206B1-ams643xf01-samsung-amoled-fhd-plus-cmd.dtsi"
+/*zhangyang@ODM_LQ@Multimedia.Dispaly,2020/05/26,add for bringup samsung s6e8fc1x01 panel*/
+#include "dsi-panel-206B1-s6e8fc1x01-samsumg-amoled-fhd-plus-video.dtsi"
+/*endif ODM_TARGET_DEVICE_206B1*/
 
 &soc {
 	dsi_panel_pwr_supply: dsi_panel_pwr_supply {
@@ -54,7 +61,7 @@
 			qcom,supply-max-voltage = <6000000>;
 			qcom,supply-enable-load = <100000>;
 			qcom,supply-disable-load = <100>;
-			qcom,supply-post-on-sleep = <20>;
+			qcom,supply-post-on-sleep = <10>;
 		};
 	};
 
@@ -179,19 +186,42 @@
 	};
 	/*#endif ODM_LQ_EDIT*/
 
-	dsi_nt36672c_video_display: qcom,dsi-display@5 {
-		label = "dsi_nt36672c_video_display";
+	/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/11/18,add for bringup jdi panel*/
+	dsi_nt36672c_jdi_video_display: qcom,dsi-display@7 {
+		label = "dsi_nt36672c_jdi_video_display";
 		qcom,display-type = "primary";
 
 		qcom,dsi-ctrl-num = <0>;
 		qcom,dsi-phy-num = <0>;
 
 		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
-					"cphy_byte_clk0", "cphy_pixel_clk0",
-					"shadow_cphybyte_clk0",
-					"shadow_cphypixel_clk0";
-		qcom,dsi-panel = <&dsi_nt36672c_video>;
+					"cphy_byte_clk0", "cphy_pixel_clk0";
+		qcom,dsi-panel = <&dsi_nt36672c_jdi_video>;
 	};
+	/*#endif ODM_LQ_EDIT*/
+
+	/*#ifdef ODM_TARGET_DEVICE_206B1*/
+	/*zhangyang@ODM_LQ@Multimedia.Dispaly,2020/04/29,add for bringup samsung panel*/
+	dsi_ams643xf01_samsung_amoled_cmd_display: qcom,dsi-display@8 {
+		label = "dsi_ams643xf01_samsung_amoled_cmd_display";
+		qcom,display-type = "primary";
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+		qcom,dsi-panel = <&dsi_ams643xf01_samsung_amoled_cmd>;
+	};
+	/*zhangyang@ODM_LQ@Multimedia.Dispaly,2020/05/26,add for bringup samsung s6e8fc1x01 panel*/
+	dsi_s6e8fc1x01_samsung_amoled_video_display: qcom,dsi-display@9 {
+		label = "dsi_s6e8fc1x01_samsung_amoled_video_display";
+		qcom,display-type = "primary";
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
+				"src_byte_clk0", "src_pixel_clk0",
+				"shadow_byte_clk0", "shadow_pixel_clk0";
+		qcom,dsi-panel = <&dsi_s6e8fc1x0_samsumg_amoled_video>;
+	};
+	/*#endif ODM_TARGET_DEVICE_206B1*/
 
 	sde_dsi: qcom,dsi-display {
 		compatible = "qcom,dsi-display";
@@ -238,9 +268,16 @@
 			/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/03,modified for bring up LCD*/
 			&dsi_hx83112a_dsbj_vid_display
 			/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/25,add for bringup C-PHY LCD*/
-			&dsi_nt36672c_boe_video_display>;
+			&dsi_nt36672c_boe_video_display
+			/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/11/18,add for bringup jdi panel*/
+			&dsi_nt36672c_jdi_video_display
 			/*endif ODM_LQ_EDIT*/
-			&dsi_nt36672c_video_display>;
+			/*#ifdef ODM_TARGET_DEVICE_206B1*/
+			/*zhangyang@ODM_LQ@Multimedia.Dispaly,2020/04/29,add for bringup samsung ams643xf01 panel*/
+			&dsi_ams643xf01_samsung_amoled_cmd_display
+			/*zhangyang@ODM_LQ@Multimedia.Dispaly,2020/05/26,add for bringup samsung s6e8fc1x01 panel*/
+			&dsi_s6e8fc1x01_samsung_amoled_video_display>;
+			/*endif ODM_TARGET_DEVICE_206B1*/
 	};
 
 	sde_wb: qcom,wb-display@0 {
@@ -260,6 +297,10 @@
 
 &sde_dp {
 	qcom,dp-usbpd-detection = <&pm6150_pdphy>;
+//#ifdef ODM_LQ_EDIT
+/*Hongbin.Chen@ODM_LQ.BSP.CHG 2019-11-25 close usb 3.0 */
+	status = "disabled";
+//#endif
 	qcom,ext-disp = <&ext_disp>;
 
 	qcom,usbplug-cc-gpio = <&tlmm 104 0>;
@@ -270,7 +311,12 @@
 };
 
 &mdss_mdp {
-	connectors = <&sde_wb &sde_dsi &sde_dp &sde_rscc>;
+//#ifndef ODM_LQ_EDIT
+/*Hongbin.Chen@ODM_LQ.BSP.CHG 2019-11-25 close usb 3.0 */
+//	connectors = <&sde_wb &sde_dsi &sde_dp &sde_rscc>;
+//#else
+	connectors = <&sde_wb &sde_dsi &sde_rscc>;
+//#endif
 };
 
 &dsi_rm69299_visionox_amoled_video {
@@ -395,11 +441,10 @@
 		};
 	};
 };
-
 /*#ifdef ODM_LQ_EDIT*/
 /*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/03,modified for bring up LCD*/
 &dsi_hx83112a_dsbj_video {
-        qcom,mdss-dsi-t-clk-post = <0x0f>;
+	qcom,mdss-dsi-t-clk-post = <0x0f>;
 	qcom,mdss-dsi-t-clk-pre = <0x37>;
 	qcom,mdss-dsi-display-timings {
 		timing@0{
@@ -414,12 +459,20 @@
 
 /*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/25,add for bringup C-PHY LCD*/
 &dsi_nt36672c_boe_video {
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 05 00 02 0a 00];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9C>;
+	qcom,mdss-dsi-panel-on-check-value = <0x9C>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,mdss-dsi-panel-max-error-count = <3>;
 	qcom,mdss-dsi-t-clk-post = <0x00>;
 	qcom,mdss-dsi-t-clk-pre = <0x00>;
 	qcom,mdss-dsi-display-timings {
 		timing@0{
-				 qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 24 23 08 08
-					08 05 02 04];
+				 qcom,mdss-dsi-panel-phy-timings = [00 23 09 09 26 24 09 09
+					09 06 02 04];
 			qcom,display-topology = <1 0 1>;
 			qcom,default-topology-index = <0>;
 		};
@@ -427,30 +480,25 @@
 };
 /*#endif ODM_LQ_EDIT*/
 
-&dsi_nt36672c_video {
-	qcom,mdss-dsi-t-clk-post = <0x00>;
-	qcom,mdss-dsi-t-clk-pre = <0x00>;
+/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/11/18,add for bringup jdi panel*/
+&dsi_nt36672c_jdi_video {
 	qcom,esd-check-enabled;
 	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
-	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
-	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
-	qcom,mdss-dsi-panel-status-value = <0x9c>;
-	qcom,mdss-dsi-panel-on-check-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 05 00 02 0a 00];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9C>;
+	qcom,mdss-dsi-panel-on-check-value = <0x9C>;
 	qcom,mdss-dsi-panel-status-read-length = <1>;
-	qcom,dsi-supported-dfps-list = <60 90 50>;
-	qcom,mdss-dsi-pan-enable-dynamic-fps;
-	qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode_vfp";
-	qcom,dsi-dyn-clk-enable;
-	qcom,dsi-dyn-clk-skip-timing-update;
-	qcom,dsi-dyn-clk-list =
-		<1052068500 1047684883 1043301259 1038917642 1034534025>;
-	qcom,dsi-dyn-clk-type = "constant-fps-adjust-hfp";
+	qcom,mdss-dsi-panel-max-error-count = <3>;
+	qcom,mdss-dsi-t-clk-post = <0x00>;
+	qcom,mdss-dsi-t-clk-pre = <0x00>;
 	qcom,mdss-dsi-display-timings {
 		timing@0{
-			qcom,mdss-dsi-panel-phy-timings = [00 23 09 09 26 24 09
-				09 09 06 02 04];
+			qcom,mdss-dsi-panel-phy-timings = [00 23 09 09 26 24 09 09
+				09 06 02 04];
 			qcom,display-topology = <1 0 1>;
 			qcom,default-topology-index = <0>;
 		};
 	};
 };
+/*#endif ODM_LQ_EDIT*/
