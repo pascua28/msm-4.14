@@ -12,4 +12,12 @@ export KBUILD_COMPILER_STRING=$($CLANG_DIR --version | head -n 1 | perl -pe 's/\
 
 make CC=$CLANG_DIR CLANG_TRIPLE=aarch64-linux-gnu- \
      CROSS_COMPILE=~/gcc-7.4.1/bin/aarch64-linux-gnu- \
-     TARGET_PRODUCT=atoll -j4 Image.gz-dtb
+     TARGET_PRODUCT=atoll -j4 Image.gz dtbs
+
+ATOLL="out/arch/arm64/boot/dts/qcom/atoll.dtb"
+ATOLL_AB="out/arch/arm64/boot/dts/qcom/atoll-ab.dtb"
+DTB_OUT="out/arch/arm64/boot/dts/qcom/206B1.dtb"
+
+if [[ -f "$ATOLL" && -f "$ATOLL_AB" ]]; then
+     cat "$ATOLL" "$ATOLL_AB" > $DTB_OUT
+fi
