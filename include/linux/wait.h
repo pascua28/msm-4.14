@@ -232,11 +232,6 @@ extern void init_wait_entry(struct wait_queue_entry *wq_entry, int flags);
 #ifdef VENDOR_EDIT
 /* fanhui@PhoneSW.BSP, 2016/02/02, DeathHealer, set the task to be killed */
 #define PF_OPPO_KILLING	0x00000001
-
-static inline int hung_long_and_fatal_signal_pending(struct task_struct *p)
-{
-	return 0;
-}
 #endif
 
 /*
@@ -267,6 +262,9 @@ static inline int hung_long_and_fatal_signal_pending(struct task_struct *p)
 		if (___wait_is_interruptible(state) && __int) {			\
 			__ret = __int;						\
 			goto __out;						\
+		}								\
+		if(hung_long_and_fatal_signal_pending(current)) { 		\
+			break;							\
 		}								\
 										\
 		cmd;								\

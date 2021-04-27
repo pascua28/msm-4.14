@@ -27,6 +27,7 @@
 #include <linux/signal_types.h>
 #include <linux/mm_types_task.h>
 #include <linux/task_io_accounting.h>
+#include <linux/signal.h>
 
 /* task_struct member predeclarations (sorted alphabetically): */
 struct audit_context;
@@ -1915,6 +1916,32 @@ static inline int test_tsk_need_resched(struct task_struct *tsk)
 {
 	return unlikely(test_tsk_thread_flag(tsk,TIF_NEED_RESCHED));
 }
+
+#ifdef VENDOR_EDIT
+static inline int hung_long_signal_pending(struct task_struct *p)
+{
+	return unlikely(test_tsk_thread_flag(p,TIF_SIGPENDING));
+}
+
+static inline int __hung_long_fatal_signal_pending(struct task_struct *p)
+{
+	return unlikely(sigismember(&p->pending.signal, SIGKILL));
+}
+
+static inline int hung_long_fatal_signal_pending(struct task_struct *p)
+{
+	return hung_long_signal_pending(p) && __hung_long_fatal_signal_pending(p);
+}
+
+static inline int hung_long_and_fatal_signal_pending(struct task_struct *p)
+{
+#ifdef CONFIG_DETECT_HUNG_TASK
+	return hung_long_fatal_signal_pending(p) && (p->flags & 0x00000001);
+#else
+	return 0;
+#endif
+}
+#endif /* VENDOR_EDIT */
 
 /*
  * cond_resched() and cond_resched_lock(): latency reduction via
