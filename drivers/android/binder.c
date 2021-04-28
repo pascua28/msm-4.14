@@ -77,7 +77,6 @@
 #include "binder_alloc.h"
 #include "binder_trace.h"
 
-
 #if defined(VENDOR_EDIT) && defined(CONFIG_OPPO_HANS)
 // Kun.Zhou@ROM.Framework, 2019/09/23, add for hans freeze manager
 #include <linux/hans.h>
@@ -289,7 +288,7 @@ struct binder_device {
 struct binder_work {
 	struct list_head entry;
 
-	enum binder_work_type {
+	enum {
 		BINDER_WORK_TRANSACTION = 1,
 		BINDER_WORK_TRANSACTION_COMPLETE,
 		BINDER_WORK_RETURN_ERROR,
@@ -953,7 +952,7 @@ static struct binder_work *binder_dequeue_work_head_ilocked(
  * Removes the head of the list if there are items on the list
  *
  * Return: pointer dequeued binder_work, NULL if list was empty
- 
+ */
 static struct binder_work *binder_dequeue_work_head(
 					struct binder_proc *proc,
 					struct list_head *list)
@@ -965,7 +964,7 @@ static struct binder_work *binder_dequeue_work_head(
 	binder_inner_proc_unlock(proc);
 	return w;
 }
-*/
+
 static void
 binder_defer_work(struct binder_proc *proc, enum binder_deferred_state defer);
 static void binder_free_thread(struct binder_thread *thread);
@@ -2871,7 +2870,6 @@ static int binder_fixup_parent(struct binder_transaction *t,
 	return 0;
 }
 
-
 /**
  * binder_proc_transaction() - sends a transaction to a process and wakes it up
  * @t:		transaction to send
@@ -3010,6 +3008,7 @@ static void binder_transaction(struct binder_proc *proc,
 	int t_debug_id = atomic_inc_return(&binder_last_id);
 	char *secctx = NULL;
 	u32 secctx_sz = 0;
+
 #if defined(VENDOR_EDIT) && defined(CONFIG_OPPO_HANS)
 // Kun.Zhou@ROM.Framework, 2019/09/23, add for hans freeze manager
 	char buf_data[INTERFACETOKEN_BUFF_SIZE];
@@ -3144,6 +3143,7 @@ static void binder_transaction(struct binder_proc *proc,
 			hans_report(SYNC_BINDER, task_tgid_nr(proc->tsk), task_uid(target_proc->tsk).val, "SYNC_BINDER", -1);
 		}
 #endif
+
 		e->to_node = target_node->debug_id;
 		if (security_binder_transaction(proc->tsk,
 						target_proc->tsk) < 0) {
@@ -3344,6 +3344,7 @@ static void binder_transaction(struct binder_proc *proc,
 		return_error_line = __LINE__;
 		goto err_bad_offset;
 	}
+
 #if defined(VENDOR_EDIT) && defined(CONFIG_OPPO_HANS)
 // Kun.Zhou@ROM.Framework, 2019/09/23, add for hans freeze manager
 	if ((tr->flags & TF_ONE_WAY) //report async binder call
@@ -3370,6 +3371,7 @@ static void binder_transaction(struct binder_proc *proc,
 		}
 	}
 #endif
+
 	off_start_offset = ALIGN(tr->data_size, sizeof(void *));
 	buffer_offset = off_start_offset;
 	off_end_offset = off_start_offset + tr->offsets_size;
@@ -4605,17 +4607,13 @@ static void binder_release_work(struct binder_proc *proc,
 				struct list_head *list)
 {
 	struct binder_work *w;
-	enum binder_work_type wtype;
 
 	while (1) {
-		binder_inner_proc_lock(proc);
-		w = binder_dequeue_work_head_ilocked(list);
-		wtype = w ? w->type : 0;
-		binder_inner_proc_unlock(proc);
+		w = binder_dequeue_work_head(proc, list);
 		if (!w)
 			return;
 
-		switch (wtype) {
+		switch (w->type) {
 		case BINDER_WORK_TRANSACTION: {
 			struct binder_transaction *t;
 
@@ -4649,11 +4647,9 @@ static void binder_release_work(struct binder_proc *proc,
 			kfree(death);
 			binder_stats_deleted(BINDER_STAT_DEATH);
 		} break;
-		case BINDER_WORK_NODE:
-			break;
 		default:
 			pr_err("unexpected work type, %d, not freed\n",
-			       wtype);
+			       w->type);
 			break;
 		}
 	}
