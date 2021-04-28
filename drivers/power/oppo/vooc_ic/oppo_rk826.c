@@ -1249,7 +1249,7 @@ static int rk826_driver_probe(struct i2c_client *client, const struct i2c_device
 	oppo_vooc_gpio_dt_init(chip);
 	opchg_set_clock_sleep(chip);
 	oppo_vooc_delay_reset_mcu_init(chip);
-	rk826_update_wake_lock = wakeup_source_register("rk826_update_wake_lock");
+	rk826_update_wake_lock = wakeup_source_register(NULL, "rk826_update_wake_lock");
 	if (chip->vooc_fw_update_newmethod) {
 		if (oppo_is_rf_ftm_mode()) {
 			oppo_vooc_fw_update_work_init(chip);

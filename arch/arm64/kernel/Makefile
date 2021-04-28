@@ -59,6 +59,9 @@ arm64-obj-$(CONFIG_ARM64_SSBD)		+= ssbd.o
 # ifdef VENDOR_EDIT //yixue.ge@bsp.drv add for minidump
 obj-y 					+= get_regs.o
 # endif
+
+arm64-obj-$(CONFIG_SHADOW_CALL_STACK)	+= scs.o
+
 ifeq ($(CONFIG_KVM),y)
 arm64-obj-$(CONFIG_HARDEN_BRANCH_PREDICTOR)	+= bpi.o
 endif

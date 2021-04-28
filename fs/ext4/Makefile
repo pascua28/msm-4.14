@@ -17,3 +17,5 @@ ext4-$(CONFIG_EXT4_FS_SECURITY)		+= xattr_security.o
 #//yh@PSW.BSP.Storage.EXT4, 2018-11-26 add for ext4 async discard suppot
 ext4-$(CONFIG_EXT4_ASYNC_DISCARD_SUPPORT)   += discard.o
 #endif
+
+ext4-$(CONFIG_FS_VERITY)		+= verity.o
