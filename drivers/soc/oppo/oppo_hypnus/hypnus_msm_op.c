@@ -260,40 +260,8 @@ int hypnus_mmc_scaling_enable(int index, int value){
 	return ret;
 }
 
-/* ufs */
-int hypnus_ufs_scaling_enable(int index, int scale)
-{
-	int ret = 0;
-
-	if (index >= MAX_UFS_STORE_HBA || ufs_store_hba[index] == NULL) {
-		pr_err("%s index err!\n", __func__);
-		return -EINVAL;
-	}
-
-	ret = ufshcd_clk_scaling_enable(ufs_store_hba[index], scale);
-	return ret;
-}
-
 static int msm_set_storage_clk_scaling(u32 type)
 {
-	if(0){
-	if(storage_is_mmc()) {
-		switch (type) {
-			case STORAGE_SCALING_DEFAULT:
-				return hypnus_mmc_scaling_enable(0, 1);
-			case STORAGE_SCALING_DISABLE_SLEEP:
-				return hypnus_mmc_scaling_enable(0, 0);
-			break;
-		}
-	} else if (storage_is_ufs()) {
-		switch (type) {
-			case STORAGE_SCALING_DEFAULT:
-				return hypnus_ufs_scaling_enable(0, 1);
-			case STORAGE_SCALING_DISABLE_SLEEP:
-				return hypnus_ufs_scaling_enable(0, 0);
-			break;
-		}
-	}}
 	return 0;
 }
 
