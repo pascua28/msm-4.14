@@ -50,18 +50,6 @@ static int msm_get_cpu_load(u32 cpu)
 	return 0;
 #endif
 }
-
-static int msm_get_boost(void)
-{
-	return sched_boost();
-}
-
-static int msm_set_boost(u32 boost)
-{
-	sched_boost_disable_all();
-	return sched_set_boost(boost);
-}
-
 static int msm_set_cpu_freq_limit(u32 c_index, u32 min, u32 max)
 {
 	struct cpufreq_policy *policy;
@@ -295,40 +283,11 @@ static int msm_set_thermal_policy(bool use_default)
 	return 0;
 }
 
-static int msm_get_updown_migrate(unsigned int *up_migrate,
-				  unsigned int *down_migrate)
-{
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0)
-	sched_get_updown_migrate(up_migrate, down_migrate);
-	return 0;
-#else
-	return -ENOTSUPP;
-#endif
-}
-
-static int msm_set_updown_migrate(unsigned int *up_migrate,
-				  unsigned int *down_migrate)
-{
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0)
-	sched_set_updown_migrate(up_migrate, down_migrate);
-    return 0;
-#else
-	return -ENOTSUPP;
-#endif
-}
-
-static int msm_set_cpunr_limit(struct hypnus_data *pdata, unsigned int index,
-		unsigned int min, unsigned int max)
-{
-	return hypnus_set_min_max_cpus(index, min, max);
-}
-
 static struct hypnus_chipset_operations msm_op = {
 	.name = "msm",
 	.get_running_avg = msm_get_running_avg,
 	.get_cpu_load = msm_get_cpu_load,
 	.set_cpu_freq_limit = msm_set_cpu_freq_limit,
-	.set_cpunr_limit = msm_set_cpunr_limit,
 	.isolate_cpu = sched_isolate_cpu,
 	.unisolate_cpu = sched_unisolate_cpu,
 	.get_gpu_load = msm_get_gpu_load,
@@ -343,10 +302,6 @@ static struct hypnus_chipset_operations msm_op = {
 	.set_sched_prefer_idle = NULL,
 	.set_ddr_state = msm_set_ddr_state,
 	.set_thermal_policy = msm_set_thermal_policy,
-	.get_boost = msm_get_boost,
-	.set_boost = msm_set_boost,
-	.get_updown_migrate = msm_get_updown_migrate,
-	.set_updown_migrate = msm_set_updown_migrate,
 };
 
 void hypnus_chipset_op_init(struct hypnus_data *pdata)

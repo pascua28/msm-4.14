@@ -30,18 +30,7 @@ static const struct hypnus_ioctl hypnus_ioctl_funcs[] = {
 	/* decision */
 	HYPNUS_IOCTL_FUNC(IOCTL_HYPNUS_SUBMIT_DECISION,
 				hypnus_ioctl_submit_decision),
-	/* sched */
-	HYPNUS_IOCTL_FUNC(IOCTL_HYPNUS_GET_BOOST,
-				hypnus_ioctl_get_boost),
-	HYPNUS_IOCTL_FUNC(IOCTL_HYPNUS_SUBMIT_BOOST,
-				hypnus_ioctl_submit_boost),
-	HYPNUS_IOCTL_FUNC(IOCTL_HYPNUS_GET_MIGRATION,
-				hypnus_ioctl_get_migration),
-	HYPNUS_IOCTL_FUNC(IOCTL_HYPNUS_SUBMIT_MIGRATION,
-				hypnus_ioctl_submit_migration),
 	/* CPU */
-	HYPNUS_IOCTL_FUNC(IOCTL_HYPNUS_SUBMIT_CPUNR,
-				hypnus_ioctl_submit_cpunr),
 	HYPNUS_IOCTL_FUNC(IOCTL_HYPNUS_GET_CPULOAD,
 				hypnus_ioctl_get_cpuload),
 	HYPNUS_IOCTL_FUNC(IOCTL_HYPNUS_GET_RQ,

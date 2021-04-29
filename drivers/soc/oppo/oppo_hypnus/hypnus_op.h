@@ -31,7 +31,6 @@ struct hypnus_chipset_operations {
 	/* uniosolate cpu call back */
 	int (*unisolate_cpu)(int cpu);
 
-	int (*set_cpunr_limit)(struct hypnus_data *pdata, unsigned int index, unsigned int min, unsigned int max);
 	int (*gpu_info_init)(struct hypnus_data *pdata);
 	int (*get_gpu_load)(u32 gpu);
 	int (*get_gpu_freq)(u32 gpu, unsigned int *min,
@@ -60,15 +59,6 @@ struct hypnus_chipset_operations {
 
 	/* set sched prefer idle policy */
 	int (*set_sched_prefer_idle)(u32 prefer_idle);
-	/* set sched boost */
-	int (*get_boost)(void);
-	int (*set_boost)(u32 boost);
-	/* get up/down migrate */
-	int (*get_updown_migrate)(unsigned int *up_migrate,
-		unsigned int *down_migrate);
-	/* set up/down migrate */
-	int (*set_updown_migrate)(unsigned int *up_migrate,
-		unsigned int *down_migrate);
 	/* set dsp frequency */
 	int (*set_dsp_freq_limit)(u32 core_id, u32 min, u32 max);
 	/* set npu frequency */

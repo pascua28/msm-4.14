@@ -218,75 +218,6 @@ int hypnus_ioclt_submit_thermal_policy(struct hypnus_data *pdata)
 	return 0;
 }
 
-long hypnus_ioctl_get_boost(struct hypnus_data *pdata,
-	unsigned int cmd, void *data)
-{
-	struct hypnus_boost_prop *prop = data;
-
-	if (pdata->cops->get_boost)
-		prop->sched_boost = pdata->cops->get_boost();
-	else
-		return -ENOTSUPP;
-
-	return 0;
-}
-
-long hypnus_ioctl_submit_boost(struct hypnus_data *pdata,
-	unsigned int cmd, void *data)
-{
-	int ret = 0;
-	struct hypnus_boost_prop *prop = data;
-
-	if (pdata->cops->set_boost) {
-		ret = pdata->cops->set_boost(prop->sched_boost);
-		if (ret)
-			pr_err("%s err %d\n", __func__, ret);
-	} else
-		return -ENOTSUPP;
-
-	return ret;
-}
-
-long hypnus_ioctl_get_migration(struct hypnus_data *pdata,
-	unsigned int cmd, void *data)
-{
-	int ret = 0;
-	struct hypnus_migration_prop *prop = data;
-	int *up, *down;
-
-	if (!pdata->cops->get_updown_migrate)
-		return -ENOTSUPP;
-
-	up = prop->up_migrate;
-	down = prop->down_migrate;
-
-	ret = pdata->cops->get_updown_migrate(up, down);
-	if (ret)
-		pr_err("%s err %d\n", __func__, ret);
-
-	return ret;
-}
-
-long hypnus_ioctl_submit_migration(struct hypnus_data *pdata,
-	unsigned int cmd, void *data)
-{
-	int ret;
-	struct hypnus_migration_prop *prop = data;
-	int *up, *down;
-
-	if (!pdata->cops->set_updown_migrate)
-		return -ENOTSUPP;
-
-	up = prop->up_migrate;
-	down = prop->down_migrate;
-
-	ret = pdata->cops->set_updown_migrate(up, down);
-	if (ret)
-		pr_err("%s err %d\n", __func__, ret);
-
-	return ret;
-}
-
 long hypnus_ioctl_submit_ddr(struct hypnus_data *pdata,
 	unsigned int cmd, void *data)
 {
@@ -314,22 +245,6 @@ cpu_available_count(struct cpumask *cluster_mask)
 	cpumask_andnot(&mask, &mask, cpu_isolated_mask);
 
 	return cpumask_weight(&mask);
-}
-
-long hypnus_ioctl_submit_cpunr(struct hypnus_data *pdata,
-	unsigned int cmd, void *data)
-{
-	struct hypnus_cpunr_prop *prop = data;
-	int i, ret = 0;
-
-	if (!pdata->cops->set_cpunr_limit)
-		return -ENOTSUPP;
-
-	for (i = 0; i < pdata->cluster_nr; i++) {
-		ret |= pdata->cops->set_cpunr_limit(pdata, i, prop->cpus[i].min, prop->cpus[i].max);
-	}
-
-	return ret;
 }
 
 long hypnus_ioctl_submit_decision(struct hypnus_data *pdata,
