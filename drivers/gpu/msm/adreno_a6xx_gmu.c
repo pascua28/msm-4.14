@@ -351,6 +351,8 @@ static int a6xx_gmu_start(struct kgsl_device *device)
 
 	/* Bring GMU out of reset */
 	gmu_core_regwrite(device, A6XX_GMU_CM3_SYSRESET, 0);
+	/* Make sure the request completes before continuing */
+	wmb();
 	if (timed_poll_check(device,
 			A6XX_GMU_CM3_FW_INIT_RESULT,
 			0xBABEFACE,
@@ -837,6 +839,9 @@ static bool a6xx_gmu_cx_is_on(struct kgsl_device *device)
 {
 	unsigned int val;
 
+	if (ADRENO_QUIRK(ADRENO_DEVICE(device), ADRENO_QUIRK_CX_GDSC))
+		return regulator_is_enabled(KGSL_GMU_DEVICE(device)->cx_gdsc);
+
 	gmu_core_regread(device, A6XX_GPU_CC_CX_GDSCR, &val);
 	return (val & BIT(31));
 }
@@ -1060,6 +1065,13 @@ static int a6xx_gmu_fw_start(struct kgsl_device *device,
 	gmu_core_regwrite(device, A6XX_GMU_AHB_FENCE_RANGE_0,
 			GMU_FENCE_RANGE_MASK);
 
+	/*
+	 * Make sure that CM3 state is at reset value. Snapshot is changing
+	 * NMI bit and if we boot up GMU with NMI bit set.GMU will boot straight
+	 * in to NMI handler without executing __main code
+	 */
+	gmu_core_regwrite(device, A6XX_GMU_CM3_CFG, 0x4052);
+
 	/* Pass chipid to GMU FW, must happen before starting GMU */
 
 	/* Keep Core and Major bitfields unchanged */
@@ -1200,6 +1212,8 @@ static int a6xx_gmu_suspend(struct kgsl_device *device)
 
 	/* Check no outstanding RPMh voting */
 	a6xx_complete_rpmh_votes(device);
+
+	gmu_core_regwrite(device, A6XX_GMU_CM3_SYSRESET, 1);
 
 	/*
 	 * This is based on the assumption that GMU is the only one controlling

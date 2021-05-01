@@ -1446,6 +1446,11 @@ static int uvc_scan_chain_forward(struct uvc_video_chain *chain,
 			break;
 		if (forward == prev)
 			continue;
+		if (forward->chain.next || forward->chain.prev) {
+			uvc_trace(UVC_TRACE_DESCR, "Found reference to "
+				"entity %d already in chain.\n", forward->id);
+			return -EINVAL;
+		}
 
 //#ifdef VENDOR_EDIT
 //#daicong@psw.bsp.tp, 2020.08.12, add for CVE-2020-0404
@@ -1536,15 +1541,12 @@ static int uvc_scan_chain_backward(struct uvc_video_chain *chain,
 				return -1;
 			}
 
-//#ifdef VENDOR_EDIT
-//#daicong@psw.bsp.tp, 2020.08.12, add for CVE-2020-0404
 			if (term->chain.next || term->chain.prev) {
 				uvc_trace(UVC_TRACE_DESCR, "Found reference to "
 					"entity %d already in chain.\n",
 					term->id);
 				return -EINVAL;
 			}
-//#endif
 
 			if (uvc_trace_param & UVC_TRACE_PROBE)
 				printk(KERN_CONT " %d", term->id);
