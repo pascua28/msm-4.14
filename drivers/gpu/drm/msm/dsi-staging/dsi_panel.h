@@ -388,4 +388,7 @@ int __attribute__((weak)) tp_gesture_enable_flag(void);
 /* add end by zhangchaofan@ODM_LQ@Multimedia.TP, for tp gesture 2019-12-05 */
 #endif /*ODM_LQ_EDIT*/
 
+void dsi_panel_calc_dsi_transfer_time(struct dsi_host_common_cfg *config,
+		struct dsi_display_mode *mode, u32 frame_threshold_us);
+
 #endif /* _DSI_PANEL_H_ */
