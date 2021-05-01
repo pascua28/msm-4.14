@@ -201,7 +201,6 @@ struct smem_partition_header {
 	__le32 offset_free_cached;
 	__le32 reserved[3];
 };
-/*chenhongbin@ODM_LQ@BSP.UFS  2020-10-13  add qcom CR2647368 to modify noc err */
 /**
  * struct smem_partition_desc - descriptor for partition
  * @virt_base:	starting virtual address of partition
@@ -284,7 +283,6 @@ struct qcom_smem {
 	struct hwspinlock *hwlock;
 
 	u32 item_count;
-/*chenhongbin@ODM_LQ@BSP.UFS  2020-10-13  add qcom CR2647368 to modify noc err */
 	struct smem_ptable __iomem *ptable_base;
 	struct smem_partition_desc global_partition_desc;
 	struct smem_partition_desc partition_desc[SMEM_HOST_COUNT];
@@ -731,7 +729,7 @@ int qcom_smem_get_free_space(unsigned host)
 	return ret;
 }
 EXPORT_SYMBOL(qcom_smem_get_free_space);
-/*chenhongbin@ODM_LQ@BSP.UFS  2020-10-13  add qcom CR2647368 to modify noc err */
+
 static int addr_in_range(void __iomem *virt_base, unsigned int size,
 			void *addr)
 {
@@ -741,7 +739,6 @@ static int addr_in_range(void __iomem *virt_base, unsigned int size,
 
 	return 0;
 }
-/*chenhongbin@ODM_LQ@BSP.UFS  2020-10-13  add qcom CR2647368 to modify noc err end */
 
 /**
  * qcom_smem_virt_to_phys() - Convert SMEM address to physical address.
@@ -1041,7 +1038,7 @@ static int qcom_smem_map_memory(struct qcom_smem *smem, struct device *dev,
 
 	return 0;
 }
-/*chenhongbin@ODM_LQ@BSP.UFS  2020-10-13  add qcom CR2647368 to modify noc err  start*/
+
 static int qcom_smem_map_toc(struct qcom_smem *smem, struct device *dev,
 				const char *name, int i)
 {
@@ -1096,7 +1093,7 @@ static int qcom_smem_mamp_legacy(struct qcom_smem *smem)
 
 	return 0;
 }
-/*chenhongbin@ODM_LQ@BSP.UFS  2020-10-13  add qcom CR2647368 to modify noc err end */
+
 static int qcom_smem_probe(struct platform_device *pdev)
 {
 	struct smem_header *header;
