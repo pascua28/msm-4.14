@@ -306,7 +306,7 @@ size_t get_gl_mem_by_pid(pid_t pid)
 		return ret;
 
 	spin_lock(&private->mem_lock);
-	ret = private->stats[0].cur;
+	ret = atomic_long_read(&private->stats[0].cur);
 	spin_unlock(&private->mem_lock);
 
 	kgsl_process_private_put(private);
