@@ -17,7 +17,19 @@ make CC="ccache $CLANG_DIR" CLANG_TRIPLE=aarch64-linux-gnu- \
 ATOLL="out/arch/arm64/boot/dts/qcom/atoll.dtb"
 ATOLL_AB="out/arch/arm64/boot/dts/qcom/atoll-ab.dtb"
 DTB_OUT="out/arch/arm64/boot/dts/qcom/206B1.dtb"
+IMAGE="out/arch/arm64/boot/Image.gz"
 
 if [[ -f "$ATOLL" && -f "$ATOLL_AB" ]]; then
      cat "$ATOLL" "$ATOLL_AB" > $DTB_OUT
+fi
+
+
+if [[ -f "$IMAGE" ]]; then
+	rm AnyKernel3/Image.gz-dtb
+	rm AnyKernel3/release.zip
+	cat "$IMAGE" "$DTB_OUT" > AnyKernel3/Image.gz-dtb
+	rm $IMAGE
+	rm $DTB_OUT
+	cd AnyKernel3
+	zip -r release.zip .
 fi
