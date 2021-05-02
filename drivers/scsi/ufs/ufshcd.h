@@ -1546,21 +1546,6 @@ static inline int ufshcd_vops_crypto_engine_get_status(struct ufs_hba *hba,
 	return 0;
 }
 
-static inline void ufshcd_vops_pm_qos_req_start(struct ufs_hba *hba,
-		struct request *req)
-{
-	if (hba->var && hba->var->pm_qos_vops &&
-		hba->var->pm_qos_vops->req_start)
-		hba->var->pm_qos_vops->req_start(hba, req);
-}
-
-static inline void ufshcd_vops_pm_qos_req_end(struct ufs_hba *hba,
-		struct request *req, bool lock)
-{
-	if (hba->var && hba->var->pm_qos_vops && hba->var->pm_qos_vops->req_end)
-		hba->var->pm_qos_vops->req_end(hba, req, lock);
-}
-
 static inline int ufshcd_vops_crypto_engine_get_req_status(struct ufs_hba *hba)
 
 {
