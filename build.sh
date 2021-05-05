@@ -25,11 +25,11 @@ fi
 
 
 if [[ -f "$IMAGE" ]]; then
-	rm AnyKernel3/Image.gz-dtb
-	rm AnyKernel3/release.zip
-	cat "$IMAGE" "$DTB_OUT" > AnyKernel3/Image.gz-dtb
-	rm $IMAGE
-	rm $DTB_OUT
+	rm AnyKernel3/Image.gz > /dev/null 2>&1
+	rm AnyKernel3/*.zip > /dev/null 2>&1
+	rm AnyKernel3/dtb > /dev/null 2>&1
+	cp $IMAGE AnyKernel3/Image.gz
+	cp $DTB_OUT AnyKernel3/dtb
 	cd AnyKernel3
 	zip -r release.zip .
 fi

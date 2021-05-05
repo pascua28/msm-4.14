@@ -126,5 +126,6 @@ all.config
 # fetched Android config fragments
 kernel/configs/android-*.cfg
 out/
-AnyKernel3/Image.gz-dtb
+AnyKernel3/Image.gz
+AnyKernel3/dtb
 *.zip
