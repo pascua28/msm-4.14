@@ -427,7 +427,7 @@ static struct file_operations gps_wakeup_proc_fops = {
     .write = gps_wakeup_proc_write,
 };
 
-static int GetGpsWakeRus() {
+static int GetGpsWakeRus(void) {
     return gps_wakeup;
 }
 #endif /* VENDOR_EDIT */
