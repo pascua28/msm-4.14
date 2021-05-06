@@ -34,7 +34,7 @@ static int hang_oppo_main_on = 1;   //default on
 int hang_oppo_recovery_method = RESTART_AND_RECOVERY;
 static int phx_hlos_wd_pet_time = DEFAULT_PHX_WD_PET_TIME;
 
-static void reinitialze_pet_time_for_debug_build()
+static void reinitialze_pet_time_for_debug_build(void)
 {
 #ifdef CONFIG_OPPO_DAILY_BUILD    //user version
     phx_hlos_wd_pet_time = 60 * 5;
