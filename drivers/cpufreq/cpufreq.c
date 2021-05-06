@@ -2655,7 +2655,7 @@ static struct file_operations unity_proc_fops = {
 	.write = unity_proc_write,
 };
 
-static int oppo_unity_cpufreq_init()
+static int oppo_unity_cpufreq_init(void)
 {
 	static int init_once = 0;
 	if (init_once == 0){
