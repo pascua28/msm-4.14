@@ -1,18 +1,13 @@
 #!/bin/bash
 
-CLANG_DIR=~/clang/bin/clang
-
 if [ ! -f out/.config ]; then
 	make O=out rmx2170_defconfig
 else
 	make O=out oldconfig
 fi
 
-export KBUILD_COMPILER_STRING=$($CLANG_DIR --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')
-
-make CC=$CLANG_DIR CLANG_TRIPLE=aarch64-linux-gnu- \
-     CROSS_COMPILE=~/gcc-7.4.1/bin/aarch64-linux-gnu- \
-     CROSS_COMPILE_ARM32=~/gcc/bin/arm-linux-gnueabihf- \
+make CROSS_COMPILE=aarch64-linux-gnu- \
+     CROSS_COMPILE_ARM32=arm-linux-gnueabihf- \
      TARGET_PRODUCT=atoll -j8 Image.gz-dtb
 
 ATOLL="out/arch/arm64/boot/dts/qcom/atoll.dtb"
