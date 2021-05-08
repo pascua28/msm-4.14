@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -53,6 +53,65 @@ u64 walt_load_reported_window;
 
 static struct irq_work walt_cpufreq_irq_work;
 static struct irq_work walt_migration_irq_work;
+
+static unsigned int task_load(struct task_struct *p)
+{
+	return p->ravg.demand;
+}
+
+static inline void fixup_cum_window_demand(struct rq *rq, s64 delta)
+{
+	rq->cum_window_demand += delta;
+	if (unlikely((s64)rq->cum_window_demand < 0))
+		rq->cum_window_demand = 0;
+}
+
+void
+walt_inc_cumulative_runnable_avg(struct rq *rq,
+				 struct task_struct *p)
+{
+	rq->cumulative_runnable_avg += p->ravg.demand;
+
+	/*
+	 * Add a task's contribution to the cumulative window demand when
+	 *
+	 * (1) task is enqueued with on_rq = 1 i.e migration,
+	 *     prio/cgroup/class change.
+	 * (2) task is waking for the first time in this window.
+	 */
+	if (p->on_rq || (p->last_sleep_ts < rq->window_start))
+		fixup_cum_window_demand(rq, p->ravg.demand);
+}
+
+void
+walt_dec_cumulative_runnable_avg(struct rq *rq,
+				 struct task_struct *p)
+{
+	rq->cumulative_runnable_avg -= p->ravg.demand;
+	BUG_ON((s64)rq->cumulative_runnable_avg < 0);
+
+	/*
+	 * on_rq will be 1 for sleeping tasks. So check if the task
+	 * is migrating or dequeuing in RUNNING state to change the
+	 * prio/cgroup/class.
+	 */
+	if (task_on_rq_migrating(p) || p->state == TASK_RUNNING)
+		fixup_cum_window_demand(rq, -(s64)p->ravg.demand);
+}
+
+void
+walt_fixup_cumulative_runnable_avg(struct rq *rq,
+				   struct task_struct *p, u64 new_task_load)
+{
+	s64 task_load_delta = (s64)new_task_load - task_load(p);
+
+	rq->cumulative_runnable_avg += task_load_delta;
+	if ((s64)rq->cumulative_runnable_avg < 0)
+		panic("cra less than zero: tld: %lld, task_load(p) = %u\n",
+			task_load_delta, task_load(p));
+
+	fixup_cum_window_demand(rq, task_load_delta);
+}
 
 u64 sched_ktime_clock(void)
 {
@@ -768,25 +827,6 @@ migrate_top_tasks(struct task_struct *p, struct rq *src_rq, struct rq *dst_rq)
 	}
 }
 
-//#ifdef COLOROS_EDIT
-/*Tiren.Ma@ROM.Framework, 2019-12-10, add for improving ed task migration */
-void migrate_ed_task(struct task_struct *p, u64 wallclock,
-            struct rq *src_rq, struct rq *dest_rq)
-{
-    int src_cpu = cpu_of(src_rq);
-    int dest_cpu = cpu_of(dest_rq);
-
-    /* For ed task, reset last_wake_ts if task migrate to faster cpu */
-    if (capacity_orig_of(src_cpu) < capacity_orig_of(dest_cpu)) {
-        p->last_wake_ts = wallclock;
-        if(dest_rq->ed_task == p) {
-            dest_rq->ed_task = NULL;
-        }
-    }
-}
-extern int sysctl_ed_task_enabled;
-//#endif /*COLOROS_EDIT*/
-
 void fixup_busy_time(struct task_struct *p, int new_cpu)
 {
 	struct rq *src_rq = task_rq(p);
@@ -905,13 +945,6 @@ void fixup_busy_time(struct task_struct *p, int new_cpu)
 		}
 	}
 
-//#ifdef COLOROS_EDIT
-	/*Tiren.Ma@ROM.Framework, 2019-12-10, add for improving ed task migration */
-	if(sysctl_ed_task_enabled) {
-		migrate_ed_task(p, wallclock, src_rq, dest_rq);
-	}
-//#endif /*COLOROS_EDIT*/
-
 done:
 	if (p->state == TASK_WAKING)
 		double_rq_unlock(src_rq, dest_rq);
@@ -947,9 +980,6 @@ void set_window_start(struct rq *rq)
 
 unsigned int max_possible_efficiency = 1;
 unsigned int min_possible_efficiency = UINT_MAX;
-
-unsigned int sysctl_sched_conservative_pl;
-unsigned int sysctl_sched_many_wakeup_threshold = 1000;
 
 #define INC_STEP 8
 #define DEC_STEP 2
@@ -1781,6 +1811,9 @@ static void update_history(struct rq *rq, struct task_struct *p,
 				p->sched_class->fixup_walt_sched_stats)
 			p->sched_class->fixup_walt_sched_stats(rq, p,
 					demand_scaled, pred_demand_scaled);
+		if (task_on_rq_queued(p))
+			p->sched_class->fixup_cumulative_runnable_avg(rq, p,
+								      demand);
 		else if (rq->curr == p)
 			walt_fixup_cum_window_demand(rq, demand_scaled);
 	}
@@ -3386,9 +3419,12 @@ static void walt_init_once(void)
 void walt_sched_init_rq(struct rq *rq)
 {
 	int j;
+	static bool init;
 
-	if (cpu_of(rq) == 0)
+	if (!init) {
 		walt_init_once();
+		init = true;
+	}
 
 	cpumask_set_cpu(cpu_of(rq), &rq->freq_domain_cpumask);
 

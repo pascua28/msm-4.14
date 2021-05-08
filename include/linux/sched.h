@@ -1404,6 +1404,7 @@ struct task_struct {
 #ifdef VENDOR_EDIT
     int static_ux;
 #endif /* VENDOR_EDIT */
+
 	/*
 	 * New fields for task_struct should be added above here, so that
 	 * they are included in the randomized portion of task_struct.
@@ -1871,6 +1872,12 @@ static inline void set_tsk_thread_flag(struct task_struct *tsk, int flag)
 static inline void clear_tsk_thread_flag(struct task_struct *tsk, int flag)
 {
 	clear_ti_thread_flag(task_thread_info(tsk), flag);
+}
+
+static inline void update_tsk_thread_flag(struct task_struct *tsk, int flag,
+					  bool value)
+{
+	update_ti_thread_flag(task_thread_info(tsk), flag, value);
 }
 
 static inline int test_and_set_tsk_thread_flag(struct task_struct *tsk, int flag)

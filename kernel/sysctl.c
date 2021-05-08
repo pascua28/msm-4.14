@@ -417,24 +417,6 @@ static struct ctl_table kern_table[] = {
 	},
 #endif
 	{
-		.procname	= "sched_conservative_pl",
-		.data		= &sysctl_sched_conservative_pl,
-		.maxlen		= sizeof(unsigned int),
-		.mode		= 0644,
-		.proc_handler	= proc_dointvec_minmax,
-		.extra1		= &zero,
-		.extra2		= &one,
-	},
-	{
-		.procname	= "sched_many_wakeup_threshold",
-		.data		= &sysctl_sched_many_wakeup_threshold,
-		.maxlen		= sizeof(unsigned int),
-		.mode		= 0644,
-		.proc_handler	= proc_dointvec_minmax,
-		.extra1		= &two,
-		.extra2		= &one_thousand,
-	},
-	{
 		.procname	= "sched_walt_rotate_big_tasks",
 		.data		= &sysctl_sched_walt_rotate_big_tasks,
 		.maxlen		= sizeof(unsigned int),
@@ -485,6 +467,20 @@ static struct ctl_table kern_table[] = {
 		.mode		= 0644,
 		.proc_handler	= sched_updown_migrate_handler,
 	},
+	{
+		.procname	= "sched_upmigrate_boosted",
+		.data		= &sysctl_sched_capacity_margin_up_boosted,
+		.maxlen		= sizeof(unsigned int) * MAX_MARGIN_LEVELS,
+		.mode		= 0644,
+		.proc_handler	= sched_updown_migrate_handler_boosted,
+	},
+	{
+		.procname	= "sched_downmigrate_boosted",
+		.data		= &sysctl_sched_capacity_margin_down_boosted,
+		.maxlen		= sizeof(unsigned int) * MAX_MARGIN_LEVELS,
+		.mode		= 0644,
+		.proc_handler	= sched_updown_migrate_handler_boosted,
+	},
 #ifdef VENDOR_EDIT
 /*Huacai.Zhou@PSW.BSP.Kernel.Performance, 2018-04-28, add foreground task io opt*/
 {
@@ -525,7 +521,15 @@ static struct ctl_table kern_table[] = {
 		.proc_handler	= proc_dointvec,
 },
 #endif
-
+	{
+		.procname       = "sched_energy_aware",
+		.data           = &sysctl_sched_energy_aware,
+		.maxlen         = sizeof(unsigned int),
+		.mode           = 0644,
+		.proc_handler   = proc_dointvec_minmax,
+		.extra1         = &zero,
+		.extra2         = &one,
+	},
 #ifdef CONFIG_SCHED_DEBUG
 	{
 		.procname	= "sched_min_granularity_ns",
