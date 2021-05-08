@@ -431,6 +431,8 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Wno-format-security \
 		   -std=gnu89
 KBUILD_CFLAGS	+= -pipe -Wno-format
+KBUILD_CFLAGS	+= -march=armv8.2-a -mtune=cortex-a76.cortex-a55
+KBUILD_AFLAGS	+= -march=armv8.2-a -mtune=cortex-a76.cortex-a55
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
