@@ -7,7 +7,7 @@ else
 fi
 
 make CROSS_COMPILE=~/gcc9/bin/aarch64-none-linux-gnu- \
-     TARGET_PRODUCT=atoll -j4 Image.gz dtbs
+     TARGET_PRODUCT=atoll -j8 Image.gz dtbs
 
 ATOLL="out/arch/arm64/boot/dts/qcom/atoll.dtb"
 ATOLL_AB="out/arch/arm64/boot/dts/qcom/atoll-ab.dtb"
