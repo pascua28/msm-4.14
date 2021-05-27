@@ -6,7 +6,7 @@ else
 	make O=out oldconfig
 fi
 
-make CROSS_COMPILE=~/gcc9/bin/aarch64-none-linux-gnu- \
+make CROSS_COMPILE=aarch64-linux-gnu- \
      TARGET_PRODUCT=atoll -j8 Image.gz dtbs
 
 ATOLL="out/arch/arm64/boot/dts/qcom/atoll.dtb"
