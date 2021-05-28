@@ -23,12 +23,6 @@
 #include <trace/events/sched.h>
 #include <linux/sched/sysctl.h>
 
-#if defined(VENDOR_EDIT) && defined(CONFIG_OPPO_HEALTHINFO)
-// jiheng.xie@PSW.TECH.KERNEL, 2018/12/28
-// Add for iowait hung monitor
-#include <soc/oppo/oppo_healthinfo.h>
-#endif
-
 #ifdef VENDOR_EDIT
 //Wen.Luo@BSP.Kernel.Stability, 2018/5/9   for DeathHealer kernel local_clock
 #include <linux/sched/clock.h>
@@ -304,16 +298,8 @@ static bool rcu_lock_break(struct task_struct *g, struct task_struct *t)
 	return can_cont;
 }
 
-#if defined (VENDOR_EDIT) && defined(CONFIG_OPPO_HEALTHINFO)
+#if defined(VENDOR_EDIT)
 // wenbin.liu@PSW.PLATFORM.KERNEL, 2018/12/19
-// Add for iowait hung ctrl set by QualityProtect APK RUS
-extern bool ohm_iopanic_mon_ctrl;
-extern bool ohm_iopanic_mon_logon;
-extern bool ohm_iopanic_mon_trig;
-extern unsigned int  iowait_hung_cnt;
-extern unsigned int  iowait_panic_cnt;
-extern void ohm_action_trig(int type);
-#else
 bool ohm_iopanic_mon_ctrl = true;
 bool ohm_iopanic_mon_logon = false;
 bool ohm_iopanic_mon_trig = false;

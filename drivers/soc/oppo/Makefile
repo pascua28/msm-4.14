@@ -10,7 +10,6 @@ else
 obj-y +=  oppo_als_cali_value/
 endif
 #xjun@ODM_LQ@BSP.Bringup,2020/05/27,modified for sensor folder build -end
-obj-y +=  oppo_healthinfo/
 obj-y +=  oppo_criticallog/
 
 #ifdef VENDOR_EDIT

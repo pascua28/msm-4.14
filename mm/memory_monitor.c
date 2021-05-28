@@ -20,7 +20,6 @@
 #include <linux/kernel.h>
 #include <linux/proc_fs.h>
 #include <linux/fs.h>
-#include <soc/oppo/oppo_healthinfo.h>
 #include <linux/seq_file.h>
 #include <asm/uaccess.h>
 #include "internal.h"
@@ -28,12 +27,7 @@
 
 struct alloc_wait_para allocwait_para = {0,0,0,0,0,0,0,0};
 
-#ifdef CONFIG_OPPO_HEALTHINFO
-extern bool ohm_memmon_ctrl;
-extern bool ohm_memmon_logon;
-extern bool ohm_memmon_trig;
-extern void ohm_action_trig(int type);
-#else
+#ifdef VENDOR_EDIT
 static bool ohm_memmon_ctrl = false;
 static bool ohm_memmon_logon = false;
 static bool ohm_memmon_trig = false;

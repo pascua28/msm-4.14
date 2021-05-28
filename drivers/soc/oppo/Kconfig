@@ -21,7 +21,6 @@ source "drivers/soc/oppo/project_info/Kconfig"
 source "drivers/soc/oppo/device_info/Kconfig"
 source "drivers/soc/oppo/mdmrst/Kconfig"
 source "drivers/soc/oppo/oppo_hypnus/Kconfig"
-source "drivers/soc/oppo/oppo_healthinfo/Kconfig"
 source "drivers/soc/oppo/oppo_shutdown_detect/Kconfig"
 source "drivers/soc/oppo/oppo_criticallog/Kconfig"
 
