@@ -1,5 +1,4 @@
 /*
-
  * Functions to sequence PREFLUSH and FUA writes.
  *
  * Copyright (C) 2011		Max Planck Institute for Gravitational Physics
@@ -93,10 +92,7 @@ enum {
 	 */
 	FLUSH_PENDING_TIMEOUT	= 5 * HZ,
 };
-#ifdef VENDOR_EDIT
-/*jason.tang@TECH.BSP.Kernel.Storage, 2019-05-20, add to count flush*/
-extern unsigned long sysctl_blkdev_issue_flush_count;
-#endif
+
 static bool blk_kick_flush(struct request_queue *q,
 			   struct blk_flush_queue *fq);
 
@@ -142,22 +138,10 @@ static bool blk_flush_queue_rq(struct request *rq, bool add_front)
 		blk_mq_add_to_requeue_list(rq, add_front, true);
 		return false;
 	} else {
-#ifdef VENDOR_EDIT
-/*Huacai.Zhou@PSW.BSP.Kernel.Performance, 2018-04-28, add foreground task io opt*/
-		if (add_front) {
-			list_add(&rq->queuelist, &rq->q->queue_head);
-			queue_throtl_add_request(rq->q, rq, true);
-		}
-		else {
-			list_add_tail(&rq->queuelist, &rq->q->queue_head);
-			queue_throtl_add_request(rq->q, rq, false);
-		}
-#else
 		if (add_front)
 			list_add(&rq->queuelist, &rq->q->queue_head);
 		else
 			list_add_tail(&rq->queuelist, &rq->q->queue_head);
-#endif /*VENDOR_EDIT*/
 		return true;
 	}
 }
@@ -481,15 +465,7 @@ void blk_insert_flush(struct request *rq)
 		if (q->mq_ops)
 			blk_mq_sched_insert_request(rq, false, true, false, false);
 		else
-#ifdef VENDOR_EDIT
-/*Huacai.Zhou@PSW.BSP.Kernel.Performance, 2018-04-28, add foreground task io opt*/
-		{
 			list_add_tail(&rq->queuelist, &q->queue_head);
-			queue_throtl_add_request(q, rq, false);
-		}
-#else
-			list_add_tail(&rq->queuelist, &q->queue_head);
-#endif /*VENDOR_EDIT*/
 		return;
 	}
 
@@ -547,10 +523,6 @@ int blkdev_issue_flush(struct block_device *bdev, gfp_t gfp_mask,
 	 */
 	if (!q->make_request_fn)
 		return -ENXIO;
-#ifdef VENDOR_EDIT
-	/*jason.tang@TECH.BSP.Kernel.Storage, 2019-05-20, add to count flush*/
-		sysctl_blkdev_issue_flush_count++;
-#endif
 
 	bio = bio_alloc(gfp_mask, 0);
 	bio_set_dev(bio, bdev);
