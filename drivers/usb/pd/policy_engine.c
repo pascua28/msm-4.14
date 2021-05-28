@@ -388,6 +388,9 @@ struct usbpd {
 	struct workqueue_struct	*wq;
 	struct work_struct	sm_work;
 	struct work_struct	start_periph_work;
+#ifdef VENDOR_EDIT
+	struct delayed_work	vbus_work;
+#endif
 	struct hrtimer		timer;
 	bool			sm_queued;
 
@@ -412,6 +415,10 @@ struct usbpd {
 	int			requested_current;	/* mA */
 	bool			pd_connected;
 	bool			in_explicit_contract;
+#ifdef VENDOR_EDIT
+/*Gang.Yan@BSP.CHG.BASIC, 2020/09/09,add for PD+SVOOC adapter*/
+	bool			in_good_connect;
+#endif
 	bool			peer_usb_comm;
 	bool			peer_pr_swap;
 	bool			peer_dr_swap;
@@ -488,6 +495,11 @@ struct usbpd {
 };
 
 static LIST_HEAD(_usbpd);	/* useful for debugging */
+#ifdef VENDOR_EDIT
+/*Gang.Yan@BSP.CHG.BASIC, 2020/09/09,add for PD+SVOOC adapter*/
+int oppo_usbpd_send_svdm(u16 svid, u8 cmd, enum usbpd_svdm_cmd_type cmd_type,
+		int obj_pos, const u32 *vdos, int num_vdos);
+#endif
 
 static const unsigned int usbpd_extcon_cable[] = {
 	EXTCON_USB,
@@ -832,12 +844,33 @@ static int pd_select_pdo(struct usbpd *pd, int pdo_pos, int uv, int ua)
 		return -ENOTSUPP;
 	}
 
+    #ifdef VENDOR_EDIT
+    #ifdef CONFIG_OPPO_SM6250_CHARGER
+	#ifndef ODM_TARGET_DEVICE_206B1
+    /* Jun.Wei@PSW.BSP.CHG.Basic, 2018/07/09, Add for pd charge */
+	usbpd_err(&pd->dev, "type: %d, uv: %d, ua: %d, curr=%d\n",
+                             type, pd->requested_voltage, pd->requested_current, curr);
+
+	pd->requested_current = 3000;
+    #else
 	pd->requested_current = curr;
+	#endif
+    #endif
+	#endif
 	pd->requested_pdo = pdo_pos;
 
 	return 0;
 }
-
+#ifdef VENDOR_EDIT
+#ifdef CONFIG_OPPO_SM6250_CHARGER
+#ifndef ODM_TARGET_DEVICE_206B1
+/* Jun.Wei@PSW.BSP.CHG.Basic, 2018/07/09, Add for pd charge */
+extern bool oppochg_pd_sdp;
+#else
+extern void oppo_set_oppochg_pd_sdp(bool value);
+#endif
+#endif
+#endif
 static int pd_eval_src_caps(struct usbpd *pd)
 {
 	int i;
@@ -875,6 +908,20 @@ static int pd_eval_src_caps(struct usbpd *pd)
 			POWER_SUPPLY_PD_ACTIVE;
 	power_supply_set_property(pd->usb_psy,
 			POWER_SUPPLY_PROP_PD_ACTIVE, &val);
+
+#ifdef VENDOR_EDIT
+#ifdef CONFIG_OPPO_SM6250_CHARGER
+/* Jun.Wei@PSW.BSP.CHG.Basic, 2018/07/09, Add for pd charge */
+	if (pd->peer_usb_comm && pd->current_dr == DR_UFP && !pd->pd_connected) {
+		printk("set oppochg_pd_sdp = true\n");
+#ifndef ODM_TARGET_DEVICE_206B1
+		oppochg_pd_sdp = true;
+#else
+			oppo_set_oppochg_pd_sdp(true);
+#endif
+	}
+#endif
+#endif
 
 	/* First time connecting to a PD source and it supports USB data */
 	if (pd->peer_usb_comm && pd->current_dr == DR_UFP && !pd->pd_connected)
@@ -1562,6 +1609,10 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 
 		pd_send_hard_reset(pd);
 		pd->in_explicit_contract = false;
+#ifdef VENDOR_EDIT
+/*Gang.Yan@BSP.CHG.BASIC, 2020/09/09,add for PD+SVOOC adapter*/
+		pd->in_good_connect = false;
+#endif
 		pd->rdo = 0;
 		rx_msg_cleanup(pd);
 		reset_vdm_state(pd);
@@ -1698,7 +1749,12 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 			dual_role_instance_changed(pd->dual_role);
 
 		pd->in_explicit_contract = true;
-
+#ifdef VENDOR_EDIT
+/*Gang.Yan@BSP.CHG.BASIC, 2020/09/09,add for PD+SVOOC adapter*/
+		pd->in_good_connect = true;
+		oppo_usbpd_send_svdm(USBPD_SID, USBPD_SVDM_DISCOVER_SVIDS,
+			SVDM_CMD_TYPE_INITIATOR, 0, NULL, 0);
+#endif
 		if (pd->vdm_tx)
 			kick_sm(pd, 0);
 		else if (pd->current_dr == DR_DFP && pd->vdm_state == VDM_NONE)
@@ -1821,6 +1877,14 @@ int usbpd_send_vdm(struct usbpd *pd, u32 vdm_hdr, const u32 *vdos, int num_vdos)
 		pd->vdm_tx = NULL;
 	}
 
+#ifdef VENDOR_EDIT
+/*Gang.Yan@BSP.CHG.BASIC, 2020/09/09,add for PD+SVOOC adapter*/
+	if (pd->current_state != PE_SRC_READY &&
+			pd->current_state != PE_SNK_READY) {
+		usbpd_err(&pd->dev, "VDM not allowed: PD not in Ready state\n");
+		return -EAGAIN;
+	}
+#endif
 	vdm_tx = kzalloc(sizeof(*vdm_tx), GFP_KERNEL);
 	if (!vdm_tx)
 		return -ENOMEM;
@@ -2380,7 +2444,6 @@ static void vconn_swap(struct usbpd *pd)
 		pd_phy_update_frame_filter(FRAME_FILTER_EN_SOP |
 					   FRAME_FILTER_EN_SOPI |
 					   FRAME_FILTER_EN_HARD_RESET);
-
 		/*
 		 * Small delay to ensure Vconn has ramped up. This is well
 		 * below tVCONNSourceOn (100ms) so we still send PS_RDY within
@@ -2508,6 +2571,10 @@ static void usbpd_sm(struct work_struct *w)
 		pd->in_pr_swap = false;
 		pd->pd_connected = false;
 		pd->in_explicit_contract = false;
+#ifdef VENDOR_EDIT
+/*Gang.Yan@BSP.CHG.BASIC, 2020/09/09,add for PD+SVOOC adapter*/
+		pd->in_good_connect = false;
+#endif
 		pd->hard_reset_recvd = false;
 		pd->caps_count = 0;
 		pd->hard_reset_count = 0;
@@ -2596,6 +2663,10 @@ static void usbpd_sm(struct work_struct *w)
 				POWER_SUPPLY_PROP_PR_SWAP, &val);
 
 		pd->in_explicit_contract = false;
+#ifdef VENDOR_EDIT
+/*Gang.Yan@BSP.CHG.BASIC, 2020/09/09,add for PD+SVOOC adapter*/
+		pd->in_good_connect = false;
+#endif
 		pd->selected_pdo = pd->requested_pdo = 0;
 		pd->rdo = 0;
 		rx_msg_cleanup(pd);
@@ -4372,7 +4443,6 @@ static ssize_t get_battery_status_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "0x%08x\n", pd->battery_sts_dobj);
 }
 static DEVICE_ATTR_RW(get_battery_status);
-
 static struct attribute *usbpd_attrs[] = {
 	&dev_attr_contract.attr,
 	&dev_attr_initial_pr.attr,
@@ -4473,6 +4543,86 @@ static void usbpd_release(struct device *dev)
 
 	kfree(pd);
 }
+#ifdef VENDOR_EDIT
+#ifdef CONFIG_OPPO_SM6250_CHARGER
+/* lizhijie@BSP.CHG.Basic, 2020/03/06, lzj Add for PD */
+#ifdef ODM_TARGET_DEVICE_206B1
+
+struct usbpd *pd_lobal = NULL;
+#endif
+int oppo_usbpd_send_svdm(u16 svid, u8 cmd, enum usbpd_svdm_cmd_type cmd_type,
+		int obj_pos, const u32 *vdos, int num_vdos) {
+	struct usbpd *pd = pd_lobal;
+	u32 svdm_hdr = SVDM_HDR(svid, 0, obj_pos, cmd_type, cmd);
+
+	return usbpd_send_vdm(pd, svdm_hdr, vdos, num_vdos);
+}
+
+bool oppo_check_pd_state_ready(void)
+{
+	return (pd_lobal->in_good_connect);
+}
+EXPORT_SYMBOL(oppo_check_pd_state_ready);
+int oppo_pdo_select(int vbus_mv, int ibus_ma)
+{
+	int i = 0;
+	int rc = 0;
+	u32 pdo = 0;
+	struct usbpd *pd = pd_lobal;
+	for (i = 0; i < ARRAY_SIZE(pd->received_pdos); i++) {
+		pdo = pd->received_pdos[i];
+		if (vbus_mv == PD_SRC_PDO_FIXED_VOLTAGE(pdo) * 50 || pdo == 0)
+			break;
+	}
+	mutex_lock(&pd->swap_lock);
+	if (pd->current_state != PE_SNK_READY || !is_sink_tx_ok(pd)) {
+		printk(KERN_ERR "%s: cannot select new pdo yet\n", __func__);
+		rc = -EBUSY;
+		goto out;
+	}
+	if (i > 7) {
+		printk(KERN_ERR "%s: inval pdo[0x%x]\n", __func__, pdo);
+		rc = -EINVAL;
+		goto out;
+	}
+	if (vbus_mv != PD_SRC_PDO_FIXED_VOLTAGE(pdo) * 50) {
+		if (i > 0) {
+			printk(KERN_ERR "%s: can not find vbus_mv[%d], the last pdos[%d]=[%d]\n", __func__,
+				vbus_mv, i -1, PD_SRC_PDO_FIXED_VOLTAGE(pd->received_pdos[i - 1]) * 50);
+		} else {
+			printk(KERN_ERR "%s: can not find vbus_mv[%d], pdos0=[%d]\n", __func__,
+				vbus_mv, PD_SRC_PDO_FIXED_VOLTAGE(pd->received_pdos[i]) * 50);
+		}
+		rc = -EINVAL;
+		goto out;
+	}
+	rc = pd_select_pdo(pd, i + 1, vbus_mv * 1000, ibus_ma * 1000);
+	if (rc) {
+		printk(KERN_ERR "%s: pd_select_pdo fail, rc=%d\n", __func__, rc);
+		goto out;
+	}
+	reinit_completion(&pd->is_ready);
+	pd->send_request = true;
+	kick_sm(pd, 0);
+	if (!wait_for_completion_timeout(&pd->is_ready, msecs_to_jiffies(1000))) {
+		printk(KERN_ERR "%s: pdo[%d], vbus_mv[%d], ibus_ma[%d] request timed out\n",
+				__func__, i, vbus_mv, ibus_ma);
+		rc = -ETIMEDOUT;
+		goto out;
+	}
+	if (pd->selected_pdo != pd->requested_pdo ||
+			pd->current_voltage != pd->requested_voltage) {
+		printk(KERN_ERR "%s: request rejected\n", __func__);
+		rc = -EINVAL;
+	}
+out:
+	pd->send_request = false;
+	mutex_unlock(&pd->swap_lock);
+	return rc;
+}
+EXPORT_SYMBOL(oppo_pdo_select);
+#endif
+#endif /*VENDOR_EDIT*/
 
 static int num_pd_instances;
 
@@ -4662,6 +4812,12 @@ struct usbpd *usbpd_create(struct device *parent)
 
 	/* force read initial power_supply values */
 	psy_changed(&pd->psy_nb, PSY_EVENT_PROP_CHANGED, pd->usb_psy);
+#ifdef VENDOR_EDIT
+#ifdef CONFIG_OPPO_SM6250_CHARGER
+/* Jun.Wei@PSW.BSP.CHG.Basic, 2018/07/09, Add for pd charge */
+	pd_lobal = pd;
+#endif
+#endif
 
 	return pd;
 

@@ -205,7 +205,6 @@ $(TARGET_PREBUILT_INT_KERNEL): $(KERNEL_OUT) $(KERNEL_HEADERS_INSTALL)
 	$(mv-modules)
 	$(clean-module-folder)
 endif
-
 $(KERNEL_HEADERS_INSTALL): $(KERNEL_OUT)
 	$(hide) if [ ! -z "$(KERNEL_HEADER_DEFCONFIG)" ]; then \
 			rm -f $(BUILD_ROOT_LOC)$(KERNEL_CONFIG); \
@@ -234,9 +233,9 @@ $(RTIC_DTB): $(INSTALLED_KERNEL_TARGET)
 # Creating a dtb.img once the kernel is compiled if TARGET_KERNEL_APPEND_DTB is set to be false
 $(INSTALLED_DTBIMAGE_TARGET): $(TARGET_PREBUILT_INT_KERNEL) $(INSTALLED_KERNEL_TARGET) $(RTIC_DTB)
 	$(hide) if [ -d "$(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/dts/vendor/" ]; then \
-			cat $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/dts/vendor/qcom/*.dtb $(RTIC_DTB) > $@; \
+			cat $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/dts/vendor/*/*.dtb $(RTIC_DTB) > $@; \
 		else \
-			cat $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/dts/qcom/*.dtb $(RTIC_DTB) > $@; \
+			cat $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/dts/*/*.dtb $(RTIC_DTB) > $@; \
 		fi
 
 .PHONY: kerneltags

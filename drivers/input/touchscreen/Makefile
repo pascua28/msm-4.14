@@ -6,6 +6,12 @@
 # Each configuration option enables a list of files.
 
 wm97xx-ts-y := wm97xx-core.o
+#ifdef ODM_LQ_EDIT
+#qujiong@ODM_LQ@BSP.Touch,2019/10/08,add for bring up TP
+obj-$(CONFIG_TOUCHSCREEN_HIMAX_CHIPSET) += lq/hxchipset/
+# zhangchaofan@ODM_LQ@BSP.Touch,2019/11/14,add for bring up oppo_touchscreen
+obj-$(CONFIG_TOUCHPANEL_OPPO) += lq/oppo_touchscreen/
+#endif /*ODM_LQ_EDIT*/
 
 obj-$(CONFIG_TOUCHSCREEN_PROPERTIES)	+= of_touchscreen.o
 obj-$(CONFIG_TOUCHSCREEN_88PM860X)	+= 88pm860x-ts.o
@@ -106,5 +112,10 @@ obj-$(CONFIG_TOUCHSCREEN_ZFORCE)	+= zforce_ts.o
 obj-$(CONFIG_TOUCHSCREEN_COLIBRI_VF50)	+= colibri-vf50-ts.o
 obj-$(CONFIG_TOUCHSCREEN_ROHM_BU21023)	+= rohm_bu21023.o
 obj-$(CONFIG_TOUCHSCREEN_ST)		+= st/
-obj-$(CONFIG_TOUCHSCREEN_HIMAX_CHIPSET)	+= hxchipset/
+
+#ifdef ODM_LQ_EDIT
+#qujiong@ODM_LQ@BSP.Touch,2019/10/08,add for bring up TP
+#obj-$(CONFIG_TOUCHSCREEN_HIMAX_CHIPSET)	+= hxchipset/
+#endif /*ODM_LQ_EDIT*/
+
 obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_TCM)	+= synaptics_tcm/

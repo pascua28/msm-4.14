@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -72,6 +72,11 @@ static void qcom_mhi_qrtr_ul_callback(struct mhi_device *mhi_dev,
 	unsigned long flags;
 
 	spin_lock_irqsave(&qdev->ul_lock, flags);
+	if (list_empty(&qdev->ul_pkts)) {
+		spin_unlock_irqrestore(&qdev->ul_lock, flags);
+		dev_err(qdev->dev, "ul_pkt list is empty\n");
+		return;
+	}
 	pkt = list_first_entry(&qdev->ul_pkts, struct qrtr_mhi_pkt, node);
 	list_del(&pkt->node);
 	complete_all(&pkt->done);

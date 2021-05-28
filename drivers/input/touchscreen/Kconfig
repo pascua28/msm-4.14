@@ -1256,17 +1256,22 @@ config TOUCHSCREEN_ST
 
 source "drivers/input/touchscreen/st/Kconfig"
 
-config TOUCHSCREEN_HIMAX_CHIPSET
-	bool "Himax touchpanel CHIPSET"
-	depends on I2C
-	help
-	  Say Y here if you have a Himax CHIPSET touchscreen.
-	  HIMAX controllers are multi touch controllers which can
-	  report 10 touches at a time.
+# #ifdef ODM_LQ_EDIT
+# qujiong@ODM_LQ@BSP.Touch,2019/10/08,add for bring up TP
 
-	  If unsure, say N.
+#config TOUCHSCREEN_HIMAX_CHIPSET
+#	bool "Himax touchpanel CHIPSET"
+#	depends on I2C
+#	help
+#	  Say Y here if you have a Himax CHIPSET touchscreen.
+#	  HIMAX controllers are multi touch controllers which can
+#	  report 10 touches at a time.
+#
+#	  If unsure, say N.
+#
+#source "drivers/input/touchscreen/hxchipset/Kconfig"
 
-source "drivers/input/touchscreen/hxchipset/Kconfig"
+# #endif /*ODM_LQ_EDIT*/
 
 config TOUCHSCREEN_SYNAPTICS_DSX
         bool "Synaptics DSX Touchscreen Driver"
@@ -1287,5 +1292,45 @@ config TOUCHSCREEN_SYNAPTICS_TCM
 	  If unsure, say N.
 
 source "drivers/input/touchscreen/synaptics_tcm/Kconfig"
+
+# #ifdef ODM_LQ_EDIT
+# qujiong@ODM_LQ@BSP.Touch,2019/10/08,add for bring up TP
+
+config TOUCHSCREEN_HIMAX_CHIPSET
+	bool "Himax touchpanel CHIPSET"
+	depends on SPI
+	help
+	  Say Y here if you have a Himax CHIPSET touchscreen.
+	  HIMAX controllers are multi touch controllers which can
+	  report 10 touches at a time.
+
+          If unsure, say N.
+source "drivers/input/touchscreen/lq/hxchipset/Kconfig"
+# zhangchaofan@ODM_LQ@BSP.Touch,2019/11/14,add for bring up oppo_touchscreen
+config TOUCHPANEL_OPPO
+	bool "oppo_touchscreen CHIPSET"
+	depends on SPI
+	help
+	  Say Y here if you have a Himax CHIPSET touchscreen.
+	  HIMAX controllers are multi touch controllers which can
+	  report 10 touches at a time.
+
+          If unsure, say N.
+source "drivers/input/touchscreen/lq/oppo_touchscreen/Kconfig"
+# zhaifeibiao@ODM_LQ@BSP.Touch,2020/05/27,add for bring up oppo_touchscreen
+config TOUCHSCREEN_FOCAL
+	tristate "Focal I2C touchscreen"
+	depends on I2C
+	depends on GPIOLIB || COMPILE_TEST
+	help
+	  Say Y here if you have the Focal touchscreen (such as one
+	  installed in Onda v975w tablets) connected to your
+	  system. It also supports 5-finger chip models, which can be
+	  found on ARM tablets, like Wexler TAB7200 and MSI Primo73.
+
+	  If unsure, say N.
+
+source "drivers/input/touchscreen/lq/oppo_touchscreen/Kconfig"
+# #endif /*ODM_LQ_EDIT*/
 
 endif

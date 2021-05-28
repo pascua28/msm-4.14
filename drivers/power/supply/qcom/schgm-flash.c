@@ -22,7 +22,17 @@
 #include <linux/of_irq.h>
 #include <linux/printk.h>
 #include <linux/pmic-voter.h>
+
+#ifndef VENDOR_EDIT
+/* Yichun.Chen  PSW.BSP.CHG  2019-07-10  for charge */
 #include "smb5-lib.h"
+#else
+/* liujiawei@ODM_LQ.BSP.CHG  2019-10-10  for charge */
+#ifndef CONFIG_OPPO_SM6250_CHARGER
+#include "smb5-lib.h"
+#endif
+#endif
+
 #include "schgm-flash.h"
 
 #define IS_BETWEEN(left, right, value) \

@@ -8,6 +8,14 @@
 #include <linux/mm.h>
 #include <linux/quicklist.h>
 #include <linux/cma.h>
+#ifdef VENDOR_EDIT
+/* Huacai.Zhou@PSW.BSP.Kernel.MM, 2018-06-26, add ion total used account*/
+#include <linux/oppo_ion.h>
+#endif /*VENDOR_EDIT*/
+#ifdef VENDOR_EDIT
+/* Wen.Luo@BSP.Kernel.Stability, 2019/04/26, Add for ksgl memory statistics */
+#include <kgsl.h>
+#endif
 
 void show_mem(unsigned int filter, nodemask_t *nodemask)
 {
@@ -48,5 +56,13 @@ void show_mem(unsigned int filter, nodemask_t *nodemask)
 #endif
 #ifdef CONFIG_MEMORY_FAILURE
 	printk("%lu pages hwpoisoned\n", atomic_long_read(&num_poisoned_pages));
+#endif
+#ifdef VENDOR_EDIT
+/* Huacai.Zhou@PSW.BSP.Kernel.MM, 2018-06-26, add ion total used account*/
+	printk("%lu pages ion total used\n", ion_total()>> PAGE_SHIFT);
+#endif /*VENDOR_EDIT*/
+#ifdef VENDOR_EDIT
+/* Wen.Luo@BSP.Kernel.Stability, 2019/04/26, Add for ksgl memory statistics */
+	printk("%lu pages KgslAlloc total used\n", (atomic_long_read(&kgsl_driver.stats.page_alloc)>> PAGE_SHIFT));
 #endif
 }

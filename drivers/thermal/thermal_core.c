@@ -508,10 +508,23 @@ void thermal_zone_device_update_temp(struct thermal_zone_device *tz,
 }
 EXPORT_SYMBOL(thermal_zone_device_update_temp);
 
+#ifdef VENDOR_EDIT //yunqingzeng@bsp.power.basic 2019-08-31 Modify for show boad tmp interval.
+static char is_first = 0;
+static struct timespec last_printk_time;
+static struct thermal_zone_device   *quiet_tz = NULL;
+static char LOCAL_INFO_TZ_NAME[] = "quiet-therm-adc";
+#define LOCAL_INFO_TZ_INTERVAL1 (15)
+#define LOCAL_INFO_TZ_INTERVAL2 (10)
+#endif /* VENDOR_EDIT */
+
 void thermal_zone_device_update(struct thermal_zone_device *tz,
 				enum thermal_notify_event event)
 {
 	int count;
+	#ifdef VENDOR_EDIT //yunqingzeng@bsp.power.basic 2019-08-31 Modify for show boad tmp interval.
+	int cur_interval = 0;
+	struct timespec cur_time;
+	#endif /* VENDOR_EDIT */
 
 	if (atomic_read(&in_suspend) && (!tz->ops->is_wakeable ||
 		!(tz->ops->is_wakeable(tz))))
@@ -522,6 +535,33 @@ void thermal_zone_device_update(struct thermal_zone_device *tz,
 
 	trace_thermal_device_update(tz, event);
 	update_temperature(tz);
+
+	#ifdef VENDOR_EDIT //yunqingzeng@bsp.power.basic 2019-08-31 Modify for show boad tmp interval.
+	if((quiet_tz == NULL) && (tz != NULL)) {
+		if(strncmp(tz->type, LOCAL_INFO_TZ_NAME, sizeof(LOCAL_INFO_TZ_NAME)-1) == 0) {
+			quiet_tz = tz;
+			is_first = 1;
+		}
+	}
+	if((quiet_tz != NULL) && (quiet_tz == tz)) {
+		if(is_first == 1) {
+			is_first = 0;
+			getnstimeofday(&last_printk_time);
+			pr_info("info tz=%s cur_tmp=%d\n", tz->type, tz->temperature);
+		} else {
+			if(tz->temperature < 39000) {
+				cur_interval = LOCAL_INFO_TZ_INTERVAL1;
+			} else {
+				cur_interval = LOCAL_INFO_TZ_INTERVAL2;
+			}
+			getnstimeofday(&cur_time);
+			if((cur_time.tv_sec > last_printk_time.tv_sec) && ((cur_time.tv_sec - last_printk_time.tv_sec) > cur_interval)) {
+				getnstimeofday(&last_printk_time);
+				pr_info("info tz=%s cur_tmp=%d\n", tz->type, tz->temperature);
+			}
+		}
+	}
+	#endif /* VENDOR_EDIT */
 
 	thermal_zone_set_trips(tz);
 

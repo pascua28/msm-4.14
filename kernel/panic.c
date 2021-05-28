@@ -32,8 +32,16 @@
 #include <trace/events/exception.h>
 #include <soc/qcom/minidump.h>
 
+#ifdef VENDOR_EDIT
+//Liang.Zhang@PSW.TECH.BOOTUP, 2018/11/12, Add for monitor kernel panic
+#include "../../../../../vendor/oppo/oppo_phoenix/kernel/oppo_phoenix/oppo_phoenix.h"
+static int kernel_panic_happened = 0;
+#endif
+
+
 #define PANIC_TIMER_STEP 100
 #define PANIC_BLINK_SPD 18
+
 
 int panic_on_oops = CONFIG_PANIC_ON_OOPS_VALUE;
 static unsigned long tainted_mask;
@@ -125,6 +133,15 @@ void nmi_panic(struct pt_regs *regs, const char *msg)
 }
 EXPORT_SYMBOL(nmi_panic);
 
+#ifdef VENDOR_EDIT
+/*yanwu@TECH.Storage.FS, 2019-08-27, flush device cache before goto dump mode*/
+extern int panic_flush_device_cache(int timeout);
+#endif  /*VENDOR_EDIT*/
+#ifdef VENDOR_EDIT
+/*yanghao@BSP.Kernel.Stability, 2019-9-5*/
+extern int get_download_mode(void);
+#endif  /*VENDOR_EDIT*/
+
 /**
  *	panic - halt the system
  *	@fmt: The text string to print
@@ -142,6 +159,18 @@ void panic(const char *fmt, ...)
 	int old_cpu, this_cpu;
 	bool _crash_kexec_post_notifiers = crash_kexec_post_notifiers;
 
+#ifdef VENDOR_EDIT
+    //Liang.Zhang@PSW.TECH.BOOTUP, 2019/01/24, avoid for Recursive panic
+    kernel_panic_happened++;
+	if(phx_set_boot_error && phx_is_phoenix_boot_completed)
+	{
+		// we only care about panic on boot not complete
+		if(kernel_panic_happened < 2 && !phx_is_phoenix_boot_completed())
+		{
+			phx_set_boot_error(ERROR_KERNEL_PANIC);
+		}
+	}
+#endif  /*VENDOR_EDIT*/
 	trace_kernel_panic(0);
 
 	/*
@@ -179,6 +208,12 @@ void panic(const char *fmt, ...)
 	vsnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
 	dump_stack_minidump(0);
+#ifdef VENDOR_EDIT
+	/*yanwu@TECH.Storage.FS, 2019-08-27, flush device cache before goto dump mode*/
+	/*yanghao@BSP.Kernel.Stability, 2019-9-5*/
+	if(!get_download_mode())
+		panic_flush_device_cache(2000);
+#endif
 	pr_emerg("Kernel panic - not syncing: %s\n", buf);
 #ifdef CONFIG_DEBUG_BUGVERBOSE
 	/*

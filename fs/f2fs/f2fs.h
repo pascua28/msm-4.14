@@ -40,6 +40,13 @@
 	} while (0)
 #endif
 
+#define f2fs_restart() do { \
+	if (system_state > SYSTEM_RUNNING) \
+		WARN_ON(1); \
+	else \
+		BUG_ON(1); \
+} while (0)
+
 enum {
 	FAULT_KMALLOC,
 	FAULT_KVMALLOC,
@@ -3517,7 +3524,12 @@ static inline void f2fs_set_encrypted_inode(struct inode *inode)
  */
 static inline bool f2fs_post_read_required(struct inode *inode)
 {
-	return f2fs_encrypted_file(inode);
+#if defined(CONFIG_ARCH_MSM) || defined(CONFIG_ARCH_QCOM)
+	return (f2fs_encrypted_file(inode)
+			&& !fscrypt_using_hardware_encryption(inode));
+#else
+	return (f2fs_encrypted_file(inode));
+#endif
 }
 
 #define F2FS_FEATURE_FUNCS(name, flagname) \
@@ -3670,4 +3682,15 @@ static inline bool is_journalled_quota(struct f2fs_sb_info *sbi)
 	return false;
 }
 
+#ifdef VENDOR_EDIT
+#define BATTERY_THRESHOLD 30 /* 30% */
+
+struct f2fs_device_state {
+	bool battery_charging;
+	int battery_percent;
+};
+extern struct f2fs_device_state f2fs_device;
 #endif
+
+
+#endif /* _LINUX_F2FS_H */

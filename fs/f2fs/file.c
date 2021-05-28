@@ -195,6 +195,15 @@ static void try_to_fix_pino(struct inode *inode)
 	up_write(&fi->i_sem);
 }
 
+#ifdef VENDOR_EDIT
+/* yawnu@TECH.Storage.FS.oF2FS, 2019/09/13, fsync nobarrier protection */
+bool of2fs_fsync_nobarrier_enable(void)
+{
+	return f2fs_device.battery_charging ||
+		f2fs_device.battery_percent > 5;
+}
+#endif
+
 static int f2fs_do_sync_file(struct file *file, loff_t start, loff_t end,
 						int datasync, bool atomic)
 {
@@ -310,7 +319,13 @@ sync_nodes:
 	f2fs_remove_ino_entry(sbi, ino, APPEND_INO);
 	clear_inode_flag(inode, FI_APPEND_WRITE);
 flush_out:
+#ifdef VENDOR_EDIT
+/* yawnu@TECH.Storage.FS.oF2FS, 2019/09/13, fsync nobarrier protection */
+	if (!atomic && (F2FS_OPTION(sbi).fsync_mode != FSYNC_MODE_NOBARRIER ||
+		!of2fs_fsync_nobarrier_enable()))
+#else
 	if (!atomic && F2FS_OPTION(sbi).fsync_mode != FSYNC_MODE_NOBARRIER)
+#endif
 		ret = f2fs_issue_flush(sbi, inode->i_ino);
 	if (!ret) {
 		f2fs_remove_ino_entry(sbi, ino, UPDATE_INO);
@@ -321,6 +336,7 @@ flush_out:
 out:
 	trace_f2fs_sync_file_exit(inode, cp_reason, datasync, ret);
 	f2fs_trace_ios(NULL, 1);
+
 	return ret;
 }
 

@@ -3440,6 +3440,21 @@ again:
 	BUG();
 }
 
+#if defined(VENDOR_EDIT) && defined(CONFIG_PROCESS_RECLAIM) && defined(CONFIG_OPPO_SPECIAL_BUILD)
+/* Kui.Zhang@PSW.BSP.Kernel.Performance, 2019-02-26,
+ * collect reclaimed_shrinked task schedule record
+ */
+static inline void collect_reclaimed_task(struct task_struct *prev,
+		struct task_struct *next)
+{
+	if (next->flags & PF_RECLAIM_SHRINK)
+		next->reclaim_ns = sched_clock();
+
+	if (prev->flags & PF_RECLAIM_SHRINK)
+		prev->reclaim_run_ns += sched_clock() - prev->reclaim_ns;
+}
+#endif
+
 /*
  * __schedule() is the main scheduler function.
  *
@@ -7005,6 +7020,7 @@ unlock_mutex:
 
 	return ret;
 }
+
 #endif
 
 static inline struct task_group *css_tg(struct cgroup_subsys_state *css)
@@ -7571,3 +7587,12 @@ void sched_exit(struct task_struct *p)
 #endif /* CONFIG_SCHED_WALT */
 
 __read_mostly bool sched_predl = 1;
+
+
+#ifdef VENDOR_EDIT
+/*fanhui@PhoneSW.BSP, 2016-06-23, get current task on one cpu*/
+struct task_struct *oppo_get_cpu_task(int cpu)
+{
+	return cpu_curr(cpu);
+}
+#endif

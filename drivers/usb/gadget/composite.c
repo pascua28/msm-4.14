@@ -1728,13 +1728,14 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 	 */
 	if ((ctrl->bRequestType & USB_TYPE_MASK) != USB_TYPE_STANDARD)
 		goto unknown;
-
+		
 	switch (ctrl->bRequest) {
 
 	/* we handle all standard USB descriptors */
 	case USB_REQ_GET_DESCRIPTOR:
 		if (ctrl->bRequestType != USB_DIR_IN)
 			goto unknown;
+		
 		switch (w_value >> 8) {
 
 		case USB_DT_DEVICE:
@@ -1743,12 +1744,24 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			cdev->desc.bMaxPacketSize0 =
 				cdev->gadget->ep0->maxpacket;
 			if (gadget_is_superspeed(gadget)) {
+#ifdef VENDOR_EDIT
+/* Yichun.Chen  PSW.BSP.CHG  2019-06-17  huangtongfeng Modify for usb2.1 LPM disable */
+				if (gadget->speed >= USB_SPEED_SUPER) {
+					cdev->desc.bcdUSB = cpu_to_le16(0x0320);
+					cdev->desc.bMaxPacketSize0 = 9;
+				} else if (gadget->lpm_capable)  {
+					cdev->desc.bcdUSB = cpu_to_le16(0x0210);
+				} else {
+					cdev->desc.bcdUSB = cpu_to_le16(0x0200);
+				}
+#else
 				if (gadget->speed >= USB_SPEED_SUPER) {
 					cdev->desc.bcdUSB = cpu_to_le16(0x0320);
 					cdev->desc.bMaxPacketSize0 = 9;
 				} else {
 					cdev->desc.bcdUSB = cpu_to_le16(0x0210);
 				}
+#endif
 			} else {
 				if (gadget->lpm_capable)
 					cdev->desc.bcdUSB = cpu_to_le16(0x0201);
@@ -1784,7 +1797,12 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 				value = min(w_length, (u16) value);
 			break;
 		case USB_DT_BOS:
+#ifdef VENDOR_EDIT
+/* Yichun.Chen  PSW.BSP.CHG  2019-06-17  huangtongfeng Modify for usb2.1 LPM disable */
+			if ((gadget_is_superspeed(gadget) && (gadget->speed >= USB_SPEED_SUPER)) ||
+#else
 			if (gadget_is_superspeed(gadget) ||
+#endif
 			    gadget->lpm_capable) {
 				value = bos_desc(cdev);
 				value = min(w_length, (u16) value);

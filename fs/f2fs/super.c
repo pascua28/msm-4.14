@@ -34,6 +34,13 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/f2fs.h>
 
+#ifdef VENDOR_EDIT
+#include <linux/power_supply.h>
+
+struct f2fs_device_state f2fs_device;
+#endif
+
+
 static struct kmem_cache *f2fs_inode_cachep;
 
 #ifdef CONFIG_F2FS_FAULT_INJECTION
@@ -242,6 +249,46 @@ static void init_once(void *foo)
 
 	inode_init_once(&fi->vfs_inode);
 }
+
+#ifdef VENDOR_EDIT
+static int f2fs_battery_notify_callback(struct notifier_block *nb,
+	unsigned long ev, void *v)
+{
+	int err = 0;
+	union power_supply_propval status;
+	struct power_supply *psy = v;
+
+	if (ev != PSY_EVENT_PROP_CHANGED) {
+		return NOTIFY_OK;
+	}
+	err = power_supply_get_property(psy,
+					POWER_SUPPLY_PROP_STATUS, &status);
+	if (err) {
+		f2fs_device.battery_charging = false;
+		f2fs_device.battery_percent = 0;
+		return NOTIFY_DONE;
+	}
+	if (POWER_SUPPLY_STATUS_CHARGING == status.intval)
+		f2fs_device.battery_charging = true;
+	else {
+		f2fs_device.battery_charging = false;
+
+		err = power_supply_get_property(psy,
+				POWER_SUPPLY_PROP_CAPACITY, &status);
+		if (!err)
+			f2fs_device.battery_percent = status.intval;
+		else
+			f2fs_device.battery_percent = 0;
+	}
+
+	return NOTIFY_DONE;
+}
+
+
+static struct notifier_block f2fs_battery_notify_block = {
+	.notifier_call =  f2fs_battery_notify_callback,
+};
+#endif
 
 #ifdef CONFIG_QUOTA
 static const char * const quotatypes[] = INITQFNAMES;
@@ -2954,6 +3001,7 @@ int f2fs_commit_super(struct f2fs_sb_info *sbi, bool recover)
 	if (!bh)
 		return -EIO;
 	err = __f2fs_commit_super(bh, F2FS_RAW_SUPER(sbi));
+
 	brelse(bh);
 	return err;
 }
@@ -3445,6 +3493,7 @@ reset_checkpoint:
 	f2fs_update_time(sbi, CP_TIME);
 	f2fs_update_time(sbi, REQ_TIME);
 	clear_sbi_flag(sbi, SBI_CP_DISABLED_QUICK);
+
 	return 0;
 
 sync_free_meta:
@@ -3616,6 +3665,14 @@ static int __init init_f2fs_fs(void)
 	err = f2fs_init_post_read_processing();
 	if (err)
 		goto free_root_stats;
+#ifdef VENDOR_EDIT
+		memset(&f2fs_device, 0, sizeof(struct f2fs_device_state));
+		err = power_supply_reg_notifier(&f2fs_battery_notify_block);
+		if (err) {
+			printk("%s error: register notifier failed!\n", __func__);
+		}
+#endif
+
 	return 0;
 
 free_root_stats:
@@ -3641,6 +3698,10 @@ fail:
 
 static void __exit exit_f2fs_fs(void)
 {
+#ifdef VENDOR_EDIT
+	power_supply_unreg_notifier(&f2fs_battery_notify_block);
+#endif
+
 	f2fs_destroy_post_read_processing();
 	f2fs_destroy_root_stats();
 	unregister_filesystem(&f2fs_fs_type);

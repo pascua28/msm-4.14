@@ -200,6 +200,11 @@ static void f2fs_write_end_io(struct bio *bio)
 			mapping_set_error(page->mapping, -EIO);
 			if (type == F2FS_WB_CP_DATA)
 				f2fs_stop_checkpoint(sbi, true);
+			f2fs_msg(sbi->sb, KERN_ERR,
+				"f2fs reboot for bio submit error! erro_num = %d\n", bio->bi_status);
+#if defined(CONFIG_ARM) || defined(CONFIG_ARM64)
+			f2fs_restart(); /* force restarting */
+#endif
 		}
 
 		f2fs_bug_on(sbi, page->mapping == NODE_MAPPING(sbi) &&
@@ -481,6 +486,7 @@ int f2fs_submit_page_bio(struct f2fs_io_info *fio)
 	struct bio *bio;
 	struct page *page = fio->encrypted_page ?
 			fio->encrypted_page : fio->page;
+
 	struct inode *inode = fio->page->mapping->host;
 
 	if (!f2fs_is_valid_blkaddr(fio->sbi, fio->new_blkaddr,
@@ -502,11 +508,12 @@ int f2fs_submit_page_bio(struct f2fs_io_info *fio)
 		bio_put(bio);
 		return -EFAULT;
 	}
+#if defined(CONFIG_ARCH_MSM) || defined(CONFIG_ARCH_QCOM)
 	fio->op_flags |= fio->encrypted_page ? REQ_NOENCRYPT : 0;
-
+#else
 	if (fio->io_wbc && !is_read_io(fio->op))
 		wbc_account_io(fio->io_wbc, page, PAGE_SIZE);
-
+#endif
 	bio_set_op_attrs(bio, fio->op, fio->op_flags);
 
 	inc_page_count(fio->sbi, is_read_io(fio->op) ?
@@ -1671,7 +1678,6 @@ submit_and_realloc:
 			__f2fs_submit_read_bio(F2FS_I_SB(inode), bio, DATA);
 			bio = NULL;
 		}
-
 		dun = PG_DUN(inode, page);
 		bio_encrypted = f2fs_may_encrypt_bio(inode, NULL);
 		if (!fscrypt_mergeable_bio(bio, dun, bio_encrypted, 0)) {
