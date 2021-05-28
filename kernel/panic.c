@@ -32,13 +32,6 @@
 #include <trace/events/exception.h>
 #include <soc/qcom/minidump.h>
 
-#ifdef VENDOR_EDIT
-//Liang.Zhang@PSW.TECH.BOOTUP, 2018/11/12, Add for monitor kernel panic
-#include "../drivers/soc/oppo/oppo_phoenix/oppo_phoenix.h"
-static int kernel_panic_happened = 0;
-#endif
-
-
 #define PANIC_TIMER_STEP 100
 #define PANIC_BLINK_SPD 18
 
@@ -159,18 +152,6 @@ void panic(const char *fmt, ...)
 	int old_cpu, this_cpu;
 	bool _crash_kexec_post_notifiers = crash_kexec_post_notifiers;
 
-#ifdef VENDOR_EDIT
-    //Liang.Zhang@PSW.TECH.BOOTUP, 2019/01/24, avoid for Recursive panic
-    kernel_panic_happened++;
-	if(phx_set_boot_error && phx_is_phoenix_boot_completed)
-	{
-		// we only care about panic on boot not complete
-		if(kernel_panic_happened < 2 && !phx_is_phoenix_boot_completed())
-		{
-			phx_set_boot_error(ERROR_KERNEL_PANIC);
-		}
-	}
-#endif  /*VENDOR_EDIT*/
 	trace_kernel_panic(0);
 
 	/*
