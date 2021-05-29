@@ -40,13 +40,6 @@
 	} while (0)
 #endif
 
-#define f2fs_restart() do { \
-	if (system_state > SYSTEM_RUNNING) \
-		WARN_ON(1); \
-	else \
-		BUG_ON(1); \
-} while (0)
-
 enum {
 	FAULT_KMALLOC,
 	FAULT_KVMALLOC,

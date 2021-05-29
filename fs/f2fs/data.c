@@ -200,11 +200,6 @@ static void f2fs_write_end_io(struct bio *bio)
 			mapping_set_error(page->mapping, -EIO);
 			if (type == F2FS_WB_CP_DATA)
 				f2fs_stop_checkpoint(sbi, true);
-			f2fs_msg(sbi->sb, KERN_ERR,
-				"f2fs reboot for bio submit error! erro_num = %d\n", bio->bi_status);
-#if defined(CONFIG_ARM) || defined(CONFIG_ARM64)
-			f2fs_restart(); /* force restarting */
-#endif
 		}
 
 		f2fs_bug_on(sbi, page->mapping == NODE_MAPPING(sbi) &&
@@ -486,7 +481,6 @@ int f2fs_submit_page_bio(struct f2fs_io_info *fio)
 	struct bio *bio;
 	struct page *page = fio->encrypted_page ?
 			fio->encrypted_page : fio->page;
-
 	struct inode *inode = fio->page->mapping->host;
 
 	if (!f2fs_is_valid_blkaddr(fio->sbi, fio->new_blkaddr,

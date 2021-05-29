@@ -610,11 +610,6 @@ retry:
 			goto retry;
 		} else if (err != -ENOENT) {
 			f2fs_stop_checkpoint(sbi, false);
-			f2fs_msg(sbi->sb, KERN_ERR,
-				"f2fs inode page read error! erro_num = %d\n", err);
-#if defined(CONFIG_ARM) || defined(CONFIG_ARM64)
-			f2fs_restart(); /* force restarting */
-#endif
 		}
 		return;
 	}

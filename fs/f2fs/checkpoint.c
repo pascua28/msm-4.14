@@ -120,10 +120,6 @@ retry:
 				++count <= DEFAULT_RETRY_IO_COUNT)
 			goto retry;
 		f2fs_stop_checkpoint(sbi, false);
-		f2fs_msg(sbi->sb, KERN_ERR,"f2fs readed meta page is not uptodate!");
-#if defined(CONFIG_ARM) || defined(CONFIG_ARM64)
-		f2fs_restart(); /* force restarting */
-#endif
 	}
 	return page;
 }
