@@ -389,14 +389,23 @@
 			<&clock_gcc GCC_QUPV3_WRAP_1_S_AHB_CLK>;
 		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&qupv3_se10_spi_active>;
+		/*#ifdef ODM_LQ_EDIT*/
+		/*zhangchaofan@ODM_LQ@BSP.Touch,for tp cs pin 2020/02/13*/
 		pinctrl-1 = <&qupv3_se10_spi_sleep>;
+		/*#endif ODM_LQ_EDIT*/
 		interrupts = <GIC_SPI 357 IRQ_TYPE_LEVEL_HIGH>;
 		spi-max-frequency = <50000000>;
 		qcom,wrapper-core = <&qupv3_1>;
 		dmas = <&gpi_dma1 0 4 1 64 0>,
 			<&gpi_dma1 1 4 1 64 0>;
 		dma-names = "tx", "rx";
-		status = "disabled";
+	/*#ifndef ODM_LQ_EDIT*/
+	/*zengjianxiong@ODM_LQ@BSP.Touch,2019/10/03
+	,modified for bring up TP*/
+		/*status = "disabled";*/
+	/*else ODM_LQ_EDIT*/
+		status = "ok";
+	/*#endif ODM_LQ_EDIT*/
 	};
 
 	qupv3_se11_spi: spi@a94000 {

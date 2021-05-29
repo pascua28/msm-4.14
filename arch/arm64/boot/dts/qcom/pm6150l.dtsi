@@ -50,6 +50,10 @@
 						"bcl-lvl1",
 						"bcl-lvl2";
 			#thermal-sensor-cells = <1>;
+//#ifdef VENDOR_EDIT
+//Gang.Yan@BSP.CHG.Basic  2020/04/10  Modify for disable bcl 
+			status = "disabled";
+//#endif
 		};
 
 		pm6150l_vadc: vadc@3100 {
@@ -316,8 +320,16 @@
 					  "flash-irq";
 			qcom,pmic-revid = <&pm6150l_revid>;
 			qcom,auto-calibration;
-			status = "disabled";
-
+			/*#ifdef ODM_LQ_EDIT*/
+			/*zhangjialong@ODM_LQ@Multimedia.Dispaly,2019/10/16,modified for change Maximum backlight current = 20mA*/
+			qcom,fs-current-limit = <20000>;
+			/*zengjianxiong@ODM_LQ@Multimedia.Dispaly,2019/10/03,modified for bring up LCD*/
+			qcom,string-cfg = <3>;
+			status = "ok";
+			/*zhangjialong@ODM_LQ@Multimedia.Dispaly,2019/11/21,add cabc function*/
+			qcom,en-cabc;
+			qcom,cabc-sel = <1>;
+			/*#endif ODM_LQ_EDIT*/
 			wled_flash: qcom,wled-flash {
 				label = "flash";
 				qcom,default-led-trigger = "wled_flash";
@@ -511,7 +523,9 @@
 			};
 		};
 	};
-
+//#ifdef VENDOR_EDIT
+//Gang.Yan@BSP.CHG.Basic  2020/04/10  Modify for disable bcl
+/*
 	pm6150l-bcl-lvl0 {
 		polling-delay-passive = <100>;
 		polling-delay = <0>;
@@ -559,4 +573,6 @@
 			};
 		};
 	};
+*/
+//#endif
 };

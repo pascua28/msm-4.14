@@ -121,8 +121,16 @@
 		dai_mi2s2: qcom,msm-dai-q6-mi2s-tert {
 			compatible = "qcom,msm-dai-q6-mi2s";
 			qcom,msm-dai-q6-mi2s-dev-id = <2>;
+			/*#ifdef ODM_LQ_EDIT*/
+			/* chengong@ODM_LQ@Multimedia.Audio,2019/10/29,add for smartpa evt1 */
+			qcom,msm-mi2s-rx-lines = <2>;
+			qcom,msm-mi2s-tx-lines = <1>;
+			/*
+			#else
 			qcom,msm-mi2s-rx-lines = <0>;
 			qcom,msm-mi2s-tx-lines = <3>;
+			*/
+			/*#endif ODM_LQ_EDIT*/
 		};
 
 		dai_mi2s3: qcom,msm-dai-q6-mi2s-quat {
@@ -135,8 +143,16 @@
 		dai_mi2s4: qcom,msm-dai-q6-mi2s-quin {
 			compatible = "qcom,msm-dai-q6-mi2s";
 			qcom,msm-dai-q6-mi2s-dev-id = <4>;
+			/*#ifdef ODM_LQ_EDIT*/
+			/*shentaotao@ODM_LQ@Multimedia.Audio,2019/10/08,modified for audio bringup*/
+			qcom,msm-mi2s-rx-lines = <2>;
+			qcom,msm-mi2s-tx-lines = <1>;
+			/*
+			#else
 			qcom,msm-mi2s-rx-lines = <1>;
 			qcom,msm-mi2s-tx-lines = <2>;
+			*/
+			/*#endif ODM_LQ_EDIT*/
 		};
 
 		dai_mi2s5: qcom,msm-dai-q6-mi2s-senary {

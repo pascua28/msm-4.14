@@ -142,6 +142,7 @@
 		qcom,sde-pipe-order-version = <0x1>;
 		qcom,sde-has-dim-layer;
 		qcom,sde-has-idle-pc;
+		//qcom,sde-mixer-stage-base-layer;
 
 		qcom,sde-max-bw-low-kbps = <3900000>;
 		qcom,sde-max-bw-high-kbps = <5500000>;
@@ -504,7 +505,12 @@
 	};
 
 	sde_dp: qcom,dp_display@ae90000 {
-		status = "ok";
+//#ifndef ODM_LQ_EDIT
+/*Hongbin.Chen@ODM_LQ.BSP.CHG 2019-11-25 close usb 3.0 */
+//		status = "ok";
+//#else
+		status = "disabled";
+//#endif
 		cell-index = <0>;
 		compatible = "qcom,dp-display";
 

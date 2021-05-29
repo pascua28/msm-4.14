@@ -86,7 +86,7 @@
 &q6core {
 	atoll_snd: sound {
 		compatible = "qcom,kona-asoc-snd";
-		qcom,mi2s-audio-intf = <0>;
+		qcom,mi2s-audio-intf = <1>;
 		qcom,auxpcm-audio-intf = <0>;
 		qcom,tdm-audio-intf = <0>;
 		qcom,wcn-btfm = <1>;
@@ -187,7 +187,7 @@
 	};
 };
 
-&qupv3_se9_i2c {
+&qupv3_se11_i2c {
 	fsa4480: fsa4480@42 {
 		compatible = "qcom,fsa4480-i2c";
 		reg = <0x42>;
