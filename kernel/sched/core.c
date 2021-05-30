@@ -3440,21 +3440,6 @@ again:
 	BUG();
 }
 
-#if defined(VENDOR_EDIT) && defined(CONFIG_PROCESS_RECLAIM) && defined(CONFIG_OPPO_SPECIAL_BUILD)
-/* Kui.Zhang@PSW.BSP.Kernel.Performance, 2019-02-26,
- * collect reclaimed_shrinked task schedule record
- */
-static inline void collect_reclaimed_task(struct task_struct *prev,
-		struct task_struct *next)
-{
-	if (next->flags & PF_RECLAIM_SHRINK)
-		next->reclaim_ns = sched_clock();
-
-	if (prev->flags & PF_RECLAIM_SHRINK)
-		prev->reclaim_run_ns += sched_clock() - prev->reclaim_ns;
-}
-#endif
-
 /*
  * __schedule() is the main scheduler function.
  *
