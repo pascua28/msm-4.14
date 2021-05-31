@@ -31,12 +31,6 @@ struct hypnus_chipset_operations {
 	/* uniosolate cpu call back */
 	int (*unisolate_cpu)(int cpu);
 
-	int (*gpu_info_init)(struct hypnus_data *pdata);
-	int (*get_gpu_load)(u32 gpu);
-	int (*get_gpu_freq)(u32 gpu, unsigned int *min,
-		unsigned int *max, unsigned int *cur);
-	/* set gpu min/max frequency */
-	int (*set_gpu_freq_limit)(u32 gpu_index, u32 min, u32 max);
 	/* display data init */
 	int (*display_init)(void);
 	/* get display resolution */

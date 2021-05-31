@@ -41,13 +41,6 @@ static const struct hypnus_ioctl hypnus_ioctl_funcs[] = {
 				hypnus_ioctl_set_lpm_gov),
 	HYPNUS_IOCTL_FUNC(IOCTL_HYPNUS_SET_STORAGE_SCALING,
 				hypnus_ioctl_set_storage_scaling),
-	/* GPU */
-	HYPNUS_IOCTL_FUNC(IOCTL_HYPNUS_GET_GPULOAD,
-				hypnus_ioctl_get_gpuload),
-	HYPNUS_IOCTL_FUNC(IOCTL_HYPNUS_GET_GPUFREQ,
-				hypnus_ioctl_get_gpufreq),
-	HYPNUS_IOCTL_FUNC(IOCTL_HYPNUS_SUBMIT_GPUFREQ,
-				hypnus_ioctl_submit_gpufreq),
 	/* DSP */
 	HYPNUS_IOCTL_FUNC(IOCTL_HYPNUS_SUBMIT_DSPFREQ,
 				hypnus_ioctl_submit_dspfreq),

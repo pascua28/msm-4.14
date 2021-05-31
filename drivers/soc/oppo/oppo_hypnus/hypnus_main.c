@@ -151,61 +151,6 @@ long hypnus_ioctl_set_storage_scaling(struct hypnus_data *pdata,
 	return pdata->cops->set_storage_scaling(prop->storage_scaling);
 }
 
-long hypnus_ioctl_get_gpuload(struct hypnus_data *pdata,
-	unsigned int cmd, void *data)
-{
-	struct hypnus_gpuload_prop *prop = data;
-	int i;
-
-	if (!pdata->cops->get_gpu_load)
-		return -ENOTSUPP;
-
-	for (i = 0; i < pdata->gpu_nr; i++)
-		prop->gpu_load[i] = pdata->cops->get_gpu_load(i);
-
-	return 0;
-}
-
-long hypnus_ioctl_get_gpufreq(struct hypnus_data *pdata,
-	unsigned int cmd, void *data)
-{
-	struct hypnus_gpufreq_prop *prop = data;
-	unsigned int *min, *max, *cur;
-	int i;
-
-	if (!pdata->cops->get_gpu_freq)
-		return -ENOTSUPP;
-
-	for (i = 0; i < pdata->gpu_nr; i++) {
-		min = &prop->freq_prop[i].min;
-		max = &prop->freq_prop[i].max;
-		cur = &prop->freq_prop[i].cur;
-		pdata->cops->get_gpu_freq(i, min, cur, max);
-	}
-
-	return 0;
-}
-
-long hypnus_ioctl_submit_gpufreq(struct hypnus_data *pdata,
-	unsigned int cmd, void *data)
-{
-	struct hypnus_gpufreq_prop *prop = data;
-	unsigned int min, max;
-	int i;
-
-	if (!pdata->cops->set_gpu_freq_limit)
-		return -ENOTSUPP;
-
-	trace_hypnus_ioctl_submit_gpufreq(prop);
-	for (i = 0; i < pdata->gpu_nr; i++) {
-		min = prop->freq_prop[i].min;
-		max = prop->freq_prop[i].max;
-		pdata->cops->set_gpu_freq_limit(i, min, max);
-	}
-
-	return 0;
-}
-
 long hypnus_ioctl_submit_lpm(struct hypnus_data *pdata,
 	unsigned int cmd, void *data)
 {
@@ -278,7 +223,6 @@ long hypnus_ioctl_get_soc_info(struct hypnus_data *pdata, unsigned int cmd, void
 	int i = 0;
 
 	info->cluster_nr = pdata->cluster_nr;
-	info->gpu_nr = pdata->gpu_nr;
 	info->dsp_nr = pdata->dsp_nr;
 	info->npu_nr = pdata->npu_nr;
 	for (i = 0; i < pdata->cluster_nr; i++) {
@@ -286,11 +230,6 @@ long hypnus_ioctl_get_soc_info(struct hypnus_data *pdata, unsigned int cmd, void
 		info->cluster[i].cpu_mask = cpumask_bits(&pdata->cluster_data[i].cluster_mask)[0];
 		info->cluster[i].cpufreq.min = pdata->cluster_data[i].cpufreq_min;
 		info->cluster[i].cpufreq.max = pdata->cluster_data[i].cpufreq_max;
-	}
-
-	for (i = 0; i < NR_GPUS; i++) {
-		info->gpu[i].gpufreq.min = pdata->gpu_data[i].gpufreq_min;
-		info->gpu[i].gpufreq.max = pdata->gpu_data[i].gpufreq_max;
 	}
 	return 0;
 }
@@ -424,14 +363,6 @@ struct hypnus_data *hypnus_get_hypdata(void)
 	return &g_hypdata;
 }
 
-int __init gpu_info_init(struct hypnus_data *pdata)
-{
-	pdata->gpu_nr = 1;
-	if (pdata->cops->gpu_info_init)
-		pdata->cops->gpu_info_init(pdata);
-	return 0;
-}
-
 int __init dsp_info_init(struct hypnus_data *pdata)
 {
 	pdata->dsp_nr = 2; /* TO BE IMPROVED */
@@ -471,8 +402,6 @@ int __init hypnus_init(void)
 	hypnus_chipset_op_init(pdata);
 
 	cpufreq_register_notifier(&cpufreq_thermal_notifier, CPUFREQ_POLICY_NOTIFIER);
-
-	gpu_info_init(pdata);
 
 	dsp_info_init(pdata);
 
