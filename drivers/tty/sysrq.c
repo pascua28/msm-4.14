@@ -136,18 +136,12 @@ static struct sysrq_key_op sysrq_unraw_op = {
 static void sysrq_handle_crash(int key)
 {
 	char *killer = NULL;
-	struct task_struct *tsk = NULL;
 
 	/* we need to release the RCU read lock here,
 	 * otherwise we get an annoying
 	 * 'BUG: sleeping function called from invalid context'
 	 * complaint from the kernel before the panic.
 	 */
-#ifdef VENDOR_EDIT
-/*wen.luo@PSW.BSP.Kernel.Stability. 2019/07/11, modify for show the murderer*/
-	tsk = current->group_leader;
-	pr_info("BUG:%s:%d call sysrq-trigger, GroupLeader is %s:%d\n", current->comm, task_pid_nr(current), tsk->comm, task_pid_nr(tsk));
-#endif /*VENDOR_EDIT*/
 	rcu_read_unlock();
 	panic_on_oops = 1;	/* force panic */
 	wmb();
