@@ -36,8 +36,8 @@ static struct work_struct input_boost_work;
 
 static bool input_boost_enabled;
 
-static unsigned int input_boost_ms = 0;
-module_param(input_boost_ms, uint, 0444);
+static unsigned int input_boost_ms = 40;
+module_param(input_boost_ms, uint, 0644);
 
 static unsigned int sched_boost_on_input;
 module_param(sched_boost_on_input, uint, 0644);
@@ -191,9 +191,6 @@ static void do_input_boost(struct work_struct *work)
 {
 	unsigned int i, ret;
 	struct cpu_sync *i_sync_info;
-
-	if (!input_boost_ms)
-		return;
 
 	cancel_delayed_work_sync(&input_boost_rem);
 	if (sched_boost_active) {
