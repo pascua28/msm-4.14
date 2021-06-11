@@ -12,6 +12,7 @@ export KBUILD_COMPILER_STRING=$($CLANG_DIR --version | head -n 1 | perl -pe 's/\
 
 make CC=$CLANG_DIR CLANG_TRIPLE=aarch64-linux-gnu- \
      CROSS_COMPILE=~/gcc-7.4.1/bin/aarch64-linux-gnu- \
+     CROSS_COMPILE_ARM32=~/gcc/bin/arm-linux-gnueabihf- \
      TARGET_PRODUCT=atoll -j8 Image.gz-dtb
 
 ATOLL="out/arch/arm64/boot/dts/qcom/atoll.dtb"
