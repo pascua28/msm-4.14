@@ -11,8 +11,3 @@ obj-y +=  oppo_als_cali_value/
 endif
 #xjun@ODM_LQ@BSP.Bringup,2020/05/27,modified for sensor folder build -end
 obj-y +=  oppo_criticallog/
-
-#ifdef VENDOR_EDIT
-#zhangzongyu@BSP.Kernel.Stability, 2020/05/10, Add for dump device info
-obj-$(CONFIG_OPPO_DUMP_DEVICE_INFO)	+=  dump_device_info/
-#endif /* VENDOR_EDIT */

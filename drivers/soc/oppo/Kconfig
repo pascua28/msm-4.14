@@ -23,8 +23,3 @@ source "drivers/soc/oppo/mdmrst/Kconfig"
 source "drivers/soc/oppo/oppo_hypnus/Kconfig"
 source "drivers/soc/oppo/oppo_shutdown_detect/Kconfig"
 source "drivers/soc/oppo/oppo_criticallog/Kconfig"
-
-#ifdef VENDOR_EDIT
-#zhangzongyu@BSP.Kernel.Stability, 2020/05/10, Add for dump device info
-source "drivers/soc/oppo/dump_device_info/Kconfig"
-#endif /* VENDOR_EDIT */
