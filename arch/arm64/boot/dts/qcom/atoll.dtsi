@@ -685,14 +685,13 @@
 		// #zhangzongyu@BSP.kernel.stability, 2020/05/15, Add for dump device info
 		// #endif
 		ramoops: ramoops@0xBA400000 {
-			compatible = "ramoops";
+			compatible = "removed-dma-pool", "ramoops";
+			no-map;
 			reg = <0 0xBA400000 0 0x00400000>;
 			record-size =  <0x40000>; //256x1024
 			console-size = <0x40000>;
 			ftrace-size =  <0x40000>;
 			pmsg-size=         <0x200000>;
-			devinfo-size=  <0x01000>;
-			ecc-size=          <0x0>;
 		};
 
 		/* global autoconfigured region for contiguous allocations */
