@@ -456,36 +456,22 @@ int oppo_ac_get_property(struct power_supply *psy,
 int oppo_battery_property_is_writeable(struct power_supply *psy,
 		enum power_supply_property psp)
 {
-	int rc = 0;
-
 	switch (psp) {
 		case POWER_SUPPLY_PROP_MMI_CHARGING_ENABLE:
-			rc = 1;
-			break;
 #ifdef CONFIG_OPPO_SMOOTH_SOC
 		case POWER_SUPPLY_PROP_SMOOTH_SWITCH:
-			rc = 1;
-			break;
-#endif	
+#endif
 #ifdef CONFIG_OPPO_SMART_CHARGER_SUPPORT
 		case POWER_SUPPLY_PROP_COOL_DOWN:
-			rc = 1;
-			break;
 #endif
 #ifdef CONFIG_OPPO_CHARGER_MTK
 		case POWER_SUPPLY_PROP_STOP_CHARGING_ENABLE:
-			rc = 1;
-			break;
 #endif
 #ifdef CONFIG_OPPO_SHIP_MODE_SUPPORT
 		case POWER_SUPPLY_PROP_SHIP_MODE:
-			rc = 1;
-			break;
 #endif
 #ifdef CONFIG_OPPO_CALL_MODE_SUPPORT
 		case POWER_SUPPLY_PROP_CALL_MODE:
-			rc = 1;
-			break;
 #endif
 #ifdef CONFIG_OPPO_SHORT_C_BATT_CHECK
 #ifdef CONFIG_OPPO_SHORT_USERSPACE
@@ -495,30 +481,21 @@ int oppo_battery_property_is_writeable(struct power_supply *psy,
 		case POWER_SUPPLY_PROP_SHORT_C_BATT_UPDATE_CHANGE:
 		case POWER_SUPPLY_PROP_SHORT_C_BATT_IN_IDLE:
 #endif /*CONFIG_OPPO_SHORT_USERSPACE*/
-			rc = 1;
-			break;
 #endif
 #ifdef CONFIG_OPPO_SHORT_HW_CHECK
 		case POWER_SUPPLY_PROP_SHORT_C_HW_FEATURE:
-			rc = 1;
-			break;
 #endif
 #ifdef CONFIG_OPPO_SHORT_IC_CHECK
 		case POWER_SUPPLY_PROP_SHORT_C_IC_VOLT_THRESH:
-			rc = 1;
-			break;
 #endif
 #ifdef CONFIG_OPPO_CHIP_SOC_NODE
 		case POWER_SUPPLY_PROP_CHIP_SOC:
-			rc = 1;
-			break;
 #endif
-//		pr_err("writeable prop %d is not supported in batt\n", psp);
+			return 1;
 		default:
-			rc = 0;
 			break;
 	}
-	return rc;
+	return 0;
 }
 
 int oppo_battery_set_property(struct power_supply *psy,
