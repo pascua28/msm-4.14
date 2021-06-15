@@ -163,11 +163,6 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 		    global_zone_page_state(NR_FREE_CMA_PAGES));
 #endif
 
-#if defined(VENDOR_EDIT) && defined(CONFIG_ION)
-/* Huacai.Zhou@PSW.BSP.Kernel.MM, 2018-06-26, add ion total used account*/
-		show_val_kb(m, "IonTotalCache:  ", global_zone_page_state(NR_IONCACHE_PAGES));
-        show_val_kb(m, "IonTotalUsed:   ", ion_total() >> PAGE_SHIFT);
-#endif /*VENDOR_EDIT*/
 #ifdef VENDOR_EDIT
 /* Wen.Luo@BSP.Kernel.Stability, 2019/04/26, Add for ksgl memory statistics */
         show_val_kb(m, "KgslAllocMAX:   ", (atomic_long_read(&kgsl_driver.stats.page_alloc_max)>> PAGE_SHIFT));
